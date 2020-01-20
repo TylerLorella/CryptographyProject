@@ -1,5 +1,19 @@
+import java.math.BigInteger;
 
 public class KMACXOF256 {
+	
+	/**
+	 * 
+	 * @param k Key
+	 * @param m Authenticated data
+	 * @param L output bit length
+	 * @param S diversification string
+	 */
+	public KMACXOF256(final BigInteger k, final String m, final int L, final String S) {
+		
+	}
+	
+	
 
 	//Prepends an encoding of the integer w to the string x, and pads the result
 	//with zeros until it is a byte string whose length in bytes is a multiple
@@ -53,9 +67,9 @@ public class KMACXOF256 {
 	
 	/*
 	 * KMACXOF256(K, X, L, S):
-Validity Conditions: len(K) <22040 and 0 ≤ L and len(S) < 22040
+Validity Conditions: len(K) <22040 and 0 â‰¤ L and len(S) < 22040
 1. newX = bytepad(encode_string(K), 136) || X || right_encode(0).
-2. T = bytepad(encode_string(“KMAC”) || encode_string(S), 136).
+2. T = bytepad(encode_string(â€œKMACâ€�) || encode_string(S), 136).
 3. return KECCAK[512](T || newX || 00, L).
 
 	KMACXOF256(String k, String x, ...
