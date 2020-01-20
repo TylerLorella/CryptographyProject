@@ -1,6 +1,18 @@
 import java.math.BigInteger;
 
 public class KMACXOF256 {
+
+	//Constants
+	
+	//Rount constants (BigInteger) 
+	private BigInteger[] RC = new BigInteger[24];
+	
+	//String representations of the constants; to populate RC on radix 16
+	private String[] toRC = {"0000000000000001", "0000000000008082", "800000000000808A", "8000000080008000",
+			"000000000000808B", "0000000080000001", "8000000080008081", "8000000000008009", "000000000000008A",
+			"0000000000000088", "0000000080008009", "000000008000000A", "000000008000808B", "8000000000008089",
+			"8000000000008003", "8000000000008002", "8000000000000080", "000000000000800A", "800000008000000A", 
+			"8000000080008081", "8000000000008080", "0000000080000001", "8000000080008008"}; 
 	
 	/**
 	 * 
@@ -10,6 +22,12 @@ public class KMACXOF256 {
 	 * @param S diversification string
 	 */
 	public KMACXOF256(final BigInteger k, final String m, final int L, final String S) {
+		
+		//Initialize round constants
+		for (int i = 0; i < 24; i++) {
+			
+			RC[i] = new BigInteger(toRC[i], 16);
+		}
 		
 	}
 	
