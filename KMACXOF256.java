@@ -117,7 +117,7 @@ public class KMACXOF256 {
 		}
 	}
 	
-	int sha3_init(int mdlen) {
+	void sha3_init(int mdlen) {
 		
 		for (int i = 0; i < 25; i++)
 			myState[i] = BigInteger.ZERO;
@@ -125,24 +125,149 @@ public class KMACXOF256 {
 		this.mdlen = mdlen;
 		rsiz = 200 - 2 * mdlen;
 		pt = 0;
-		
-		return 1;
 	}
 	
 	
 	//Takes in some data that can be byte-indexed, and xors the data against the current state, 
-	int sha3_update(byte[] data) {
+	void sha3_update(byte[] data) {
 		
+		byte[] byteState = stateAsBytes(myState);
+		
+		//what is the pt for?
 		int j = pt;
 		for (int i = 0; i < data.length; i++) {
 			
 			//TODO: Byte-index an array of BigIntegers? 
-			
+			byteState[j++] ^= data[i];
+				
 			if (j >= rsiz) {
+				myState = stateBigInts(byteState);
 				keccakf(myState);
 				j = 0;
 			}
 		}
+		
+		myState = stateBigInts(byteState);
+		pt = j;
+		
+	}
+	
+	/**
+	 * Converts the state array of BigIntegers to an array of bytes
+	 * @param theState The state represented as an array of BigIntegers.
+	 * 
+	 * @return An array of bytes representing the state.
+	 * 
+	 */
+	static byte[] stateAsBytes(BigInteger[] theState) {
+		
+		byte[] byteState = new byte[200];
+		
+		//Since there are 24 BigInts in the state
+		for(int i = 0; i < 24; i++) {
+			
+			byte[] currBytes = theState[i].toByteArray();
+			//Since there are 8 bytes per BigInteger
+			for (int j = 0; j < 8; j++) {
+				
+				byteState[8*i + j] = currBytes[j];
+				
+			}
+		}
+		
+		return byteState;
+	}
+	
+	/**
+	 * Converts the state array of bytes to an array of BigIntegers.
+	 * 
+	 * @param theState The state represented as an array of bytes.
+	 * @return A Biginteger array representation of the state.
+	 */
+	static BigInteger[] stateBigInts(byte[] theState) {
+		
+		BigInteger[] intState = new BigInteger[25];
+		
+		for (int i = 0; i < 200; i+=8) {
+			
+			byte[] currBytes = new byte[8];
+			for (int j = 0; j < 8; j++) {
+				currBytes[j] = theState[i+j];
+			}
+			intState[i/25] = new BigInteger(currBytes);
+			
+			
+		}
+		
+		return intState;
+	}
+	
+	/**
+	 * Does some shuffles, returns a digest known as md
+	 * @return
+	 */
+	byte[] sha3_final() {
+		
+		byte[] md = new byte[mdlen];
+		
+		byte[] stateBytes = stateAsBytes(myState);
+		
+		stateBytes[pt] ^= 0x06;
+		stateBytes[rsiz - 1] ^= 0x80;
+		myState = stateBigInts(stateBytes);
+		keccakf(myState);
+		
+		stateBytes = stateAsBytes(myState);
+		
+		for (int i = 0; i < mdlen; i++) {
+			md[i] = stateBytes[i];
+		}
+		
+		myState = stateBigInts(stateBytes);
+		
+		return md;
+	}
+	
+	//TODO: For init, update and final methods, do we rely on a return?
+	//Or is this merely an artifact of C? Should they be void?
+	
+	
+	/**
+	 * Returns a hash from given data 
+	 * @param 
+	 */
+	//Does this need a new, unique context...? Or can we hold onto our current one?
+	byte[] sha3(byte[] in, int mdlen) {
+		
+		sha3_init(mdlen);
+		sha3_update(in);
+		return sha3_final();
+	}
+	
+	void shake_xof() {
+		
+		byte[] byteState = stateAsBytes(myState);
+		byteState[pt] ^= 0x04;
+		byteState[rsiz-1] ^= 0x80;
+		myState = stateBigInts(byteState);
+		keccakf(myState);
+		pt = 0;
+		
+	}
+	
+	void shake_out(byte[] out) {
+		
+		
+		int j = pt;
+		for (int i = 0; i < out.length; i++) {
+			if (j >= rsiz) {
+				keccakf(myState);
+				j = 0;
+			}
+			byte[] stateBytes = stateAsBytes(myState);
+			out[i] = stateBytes[j++];
+		}
+		pt = j;
 		
 	}
 	
