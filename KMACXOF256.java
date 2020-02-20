@@ -44,7 +44,10 @@ public class KMACXOF256 {
 	BigInteger[] myState = new BigInteger[25];
 	
 	//State instance fields
+	//Length of the return we're looking for
 	private int mdlen;
+	
+	//
 	private int rsiz;
 	
 	//Keeps track of which bytes have already been operated on in between update steps
@@ -60,17 +63,26 @@ public class KMACXOF256 {
 	 */
 	public KMACXOF256(final BigInteger k, final String m, final int L, final String S) {
 
+		//Set ultimate output length of digest
+		mdlen = L;
+		
 		//Initialize round constants
 		for (int i = 0; i < 24; i++) {
 
 			RC[i] = new BigInteger(toRC[i], 16);
 
-			System.out.println("Number: " + RC[i]);
+			//System.out.println("Number: " + RC[i]);
 		}
-
+		
+		sha3_init(mdlen);
+		sha3_update(m.getBytes());
 
 	}
 	
+	public String getData() {
+		return new String ();
+	}
+
 	//return? where is state changed
 	public void keccakf(BigInteger[] state) {
 		
@@ -85,7 +97,6 @@ public class KMACXOF256 {
 			
 			for (int i = 0; i < 5; i++) {
 				
-				//Fs in chat
 				t = bc[(i+4) % 5].xor(ROTL64(bc[(i+1) % 5], 1)); 
 				
 				for (int j = 0; j < 25; j += 5) {
@@ -165,8 +176,16 @@ public class KMACXOF256 {
 		
 		//Since there are 24 BigInts in the state
 		for(int i = 0; i < 24; i++) {
+			//TODO: Work on here, finish, lol
+			//Put bytes for the current BigInteger within the state into the byte array byteState.
+			//Since BigInts may not fill all 8 byte slots, fill from the RIGHT and prepend with zeroes for remaining slots
+			byte[] currbytes = new byte[8];
+			for(int x = 0; x < 8; x++) {
+				theState[i]
+			}
 			
 			byte[] currBytes = theState[i].toByteArray();
+			for (byte b : currBytes) System.out.print(b + "  ");
 			//Since there are 8 bytes per BigInteger
 			for (int j = 0; j < 8; j++) {
 				
@@ -268,7 +287,6 @@ public class KMACXOF256 {
 			out[i] = stateBytes[j++];
 		}
 		pt = j;
-		
 	}
 	
 	
@@ -322,7 +340,7 @@ public class KMACXOF256 {
 	}
 
 
-	/*
+	/*k = data, 
 	 * KMACXOF256(K, X, L, S):
 Validity Conditions: len(K) <22040 and 0 â‰¤ L and len(S) < 22040
 1. newX = bytepad(encode_string(K), 136) || X || right_encode(0).
@@ -336,14 +354,6 @@ Validity Conditions: len(K) <22040 and 0 â‰¤ L and len(S) < 22040
 		
 		return x.shiftLeft(y).or(x.shiftRight(64 - y));
 		
-	}
-	
-	
-	public static void main(String args[]) {
-
-		KMACXOF256 myKmac = new KMACXOF256(BigInteger.ZERO, "", 1, "");
-
-
 	}
 
 }
