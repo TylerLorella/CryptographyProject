@@ -86,9 +86,12 @@ public class KMACXOF256 {
 		String toReturn = "";
 		//for (byte element: messageDigest) toReturn = toReturn + " " + Integer.toBinaryString(element);
 		//for (byte element: messageDigest) System.out.println( element );
+	
 		
 		for (int index = 0; index < messageDigest.length; index++) {
-			toReturn = toReturn + "byte " + index + ", byte String: " + Integer.toBinaryString(index) + 
+			//toReturn = toReturn + "byte index: " + index + ", byte String: " + Integer.toBinaryString(messageDigest[index]) + 
+			//		", decimal: " + Integer.toUnsignedString(messageDigest[index]) + "\n";
+			toReturn = toReturn + "byte index: " + index + ", byte String: " + byte2String(messageDigest[index]) + 
 					", decimal: " + Integer.toUnsignedString(messageDigest[index]) + "\n";
 		}
 		
@@ -341,7 +344,6 @@ public class KMACXOF256 {
 	//if s.length() < 2^2040,
 	//Returns the left_encode of the string's length concatenated w the string
 	public String encode_string(String s) {
-
 		return left_encode(s.length()) + s;
 	}
 
@@ -355,14 +357,11 @@ public class KMACXOF256 {
 	 * O_(n+1) = enc_8(n)
 	 */
 	public String left_encode(int x) {
-
-
 		return null;
 
 	}
 
 	public String right_encode(int x){
-
 		return null;
 	}
 
@@ -378,9 +377,25 @@ Validity Conditions: len(K) <22040 and 0 â‰¤ L and len(S) < 22040
 	 */
 
 	public BigInteger ROTL64(BigInteger x, int y) {
-
 		return x.shiftLeft(y).or(x.shiftRight(64 - y));
 
 	}
+
+
+	public String byte2String(byte toConvert) {
+		String toReturn = "";
+		
+		byte byteMask = 0b0000001;
+		
+		for (int bitIndex = 0; bitIndex < 8; bitIndex++) {
+			int bit = byteMask & toConvert;
+			if (bit == 0) toReturn = "0" + toReturn;
+			else toReturn = "1" + toReturn;
+			byteMask = (byte) (byteMask * 2);
+		}
+		
+		return toReturn;
+	}
+	
 
 }
