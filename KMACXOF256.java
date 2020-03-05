@@ -16,6 +16,8 @@ public class KMACXOF256 {
 	//Round constants (BigInteger) 
 	private BigInteger[] RC = new BigInteger[24];
 
+	
+	
 	//String representations of the constants; to populate RC on radix 16
 	private String[] toRC = {"0000000000000001", "0000000000008082", "800000000000808A", "8000000080008000",
 			"000000000000808B", "0000000080000001", "8000000080008081", "8000000000008009", "000000000000008A",
@@ -38,6 +40,7 @@ public class KMACXOF256 {
 	int[] keccakf_piln = {10, 7,  11, 17, 18, 3, 5, 16, 8,  21, 24, 4,
 			15, 23, 19, 13, 12, 2, 20, 14, 22, 9, 6, 1};
 
+	private byte[] inData;
 
 	BigInteger[] bc = new BigInteger[5];
 	BigInteger t;
@@ -65,6 +68,8 @@ public class KMACXOF256 {
 	 */
 	KMACXOF256(byte[] K, byte[] X, int L, String S){
 
+		mdlen = L / 8;
+		
 		//Initialize round constants
 		for (int i = 0; i < 24; i++) {
 			RC[i] = new BigInteger(toRC[i], 16);
@@ -89,7 +94,7 @@ public class KMACXOF256 {
 				index++;
 			}
 		//TODO: Integrate
-		cSHAKE256(newX, L/8, "KMAC", S);
+		cSHAKE256(newX, L, "KMAC", S);
 	}
 	
 		//TODO: Considering this dumb bitch returns and we don't ever even care about that because it's really just an extension of the constructor,
@@ -103,7 +108,7 @@ public class KMACXOF256 {
 		 * @param S
 		 * @return
 		 */
-		byte[] cSHAKE256(byte[] X, int L, String N, String S){
+		void cSHAKE256(byte[] X, int L, String N, String S){
 
 			char[] flex = N.toCharArray();
 			byte[] x1 = new byte[flex.length];
@@ -141,7 +146,7 @@ public class KMACXOF256 {
 			ret[ret.length-2] = 0;
 			ret[ret.length-1] = 0;
 
-			return sha3(ret, L);
+			inData = ret;
 		}
 
 
@@ -266,7 +271,8 @@ public class KMACXOF256 {
 		}
 		
 		public byte[] getData() {
-			byte[] messageDigest = sha3_final();
+		
+			byte[] messageDigest = sha3(inData, mdlen);
 			return messageDigest;
 		}
 
