@@ -14,6 +14,9 @@ public class Point {
 	private BigInteger x;
 	private BigInteger y;
 	
+	public static Point G = new Point(BigInteger.valueOf(18), false);
+	
+	
 	/**
 	 * Constructs a point with a given x and y value.
 	 * 
@@ -33,6 +36,14 @@ public class Point {
 		this.y = BigInteger.ONE;
 	}
 	
+	public BigInteger getX() {
+		return x;
+	}
+
+	public BigInteger getY() {
+		return y;
+	}
+
 	/**
 	 * Creates point (x, y) based on full x coordinate and the least significant bit of y.
 	 * @param x The x-coordinate of the point.
@@ -51,13 +62,11 @@ public class Point {
 		
 		if (!root.equals(null)) {
 			this.y = root;
-			
 		}
 		//if not acceptable, use the default? TODO
 		else {
 			this.y = BigInteger.ONE;
 		}
-		
 		
 	}
 	
@@ -130,5 +139,6 @@ public class Point {
 	 r = p.subtract(r); // correct the lsb
 	 }
 	 return (r.multiply(r).subtract(v).mod(p).signum() == 0) ? r : null;
-	}	
+	}
+	
 }
