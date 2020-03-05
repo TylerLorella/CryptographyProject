@@ -20,16 +20,18 @@ public class Main {
 		//s.close();
 		
 		//Key of 0 (as bigint)
-		//KMACXOF256 kmac = new KMACXOF256(testKey, encryptMeDaddy, 1, diveyString);
-		//System.out.println("Result: \n" + kmac.getStringData());
+		KMACXOF256 kmac = new KMACXOF256(testKey, encryptMeDaddy, 1, diveyString);
+		System.out.println("Result: \n" + kmac.getData());
 
 		
 		System.out.println("Cryptography Project by Max England, and Tyler Lorella");
-		System.out.println("Enter digit for mode of operation: \n"
+		System.out.println("Enter digit for mode of operation: "
 				+ "1-Hash");
 		Scanner scanner = new Scanner(System.in);
 		String mode = scanner.nextLine();
-		System.out.println("Enter digit for input method: \n"
+		
+		
+		System.out.println("Enter digit for input method: "
 				+ "1-File Input; 2-String Input");
 		String inputMethod = scanner.nextLine();
 		
@@ -53,7 +55,7 @@ public class Main {
 				System.exit(0);
 			}
 		} else {
-			System.out.print("Enter input");
+			System.out.print("Enter data: ");
 			String stringInput = scanner.nextLine();
 			data = stringInput.getBytes();
 		}
@@ -62,11 +64,16 @@ public class Main {
 		//modes
 		//1 -  Hash - 
 		if (mode.equals("1")) {
-			System.out.println(hashKMAC(data));
+			byte[] crypt = hashKMAC(data);
+			System.out.println("length: " + crypt.length);
+			printByteData(crypt);
 		} else if (mode.equals("2")) {
 			System.out.print("Enter Key:");
 			String key = scanner.nextLine();
-			System.out.println(macKMAC(key.getBytes(), data));
+			byte[] crypt = macKMAC(key.getBytes(), data);
+			printByteData(crypt);
+		} else if (mode.equals("3")) {
+			
 		}
 		
 		
@@ -75,7 +82,6 @@ public class Main {
 	
 	private static byte[] hashKMAC(byte[] data) {
 		String key = "";
-		
 		KMACXOF256 sponge = new KMACXOF256(key.getBytes(), data, 512, "D"); 
 		return sponge.getData();
 	}
@@ -85,13 +91,36 @@ public class Main {
 		return sponge.getData();
 	}
 	
-	
+	private static void printByteData(byte[] data) {
+		String toBitString = "";
+		for (int index = 0; index < data.length; index++) {
+			toBitString = toBitString + "byte index: " + index + ", byte String: " + byte2String(data[index]) + 
+					", decimal: " + Integer.toUnsignedString(data[index]) + "\n";
+		}
+
+		System.out.println("Result: " + toBitString);
+	}
 	
 	private static byte[] convertToArray(ArrayList<Byte> input) {
 		byte[] toReturn = new byte[input.size()];
 		for (int index = 0; index < input.size(); index++) {
 			toReturn[index] = input.get(index);
 		}
+		return toReturn;
+	}
+	
+	private static String byte2String(byte toConvert) {
+		String toReturn = "";
+
+		byte byteMask = 0b0000001;
+
+		for (int bitIndex = 0; bitIndex < 8; bitIndex++) {
+			int bit = byteMask & toConvert;
+			if (bit == 0) toReturn = "0" + toReturn;
+			else toReturn = "1" + toReturn;
+			byteMask = (byte) (byteMask * 2);
+		}
+
 		return toReturn;
 	}
 
