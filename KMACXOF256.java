@@ -136,7 +136,7 @@ public class KMACXOF256 {
 			byte[] n = encode_string(x1);
 			byte[] s = encode_string(x2);
 
-			byte[] newX = new byte[x1.length + x2.length];
+			byte[] newX = new byte[n.length + s.length];
 			for (int index = 0; index < n.length; index++) {
 				newX[index] = n[index];
 			}
@@ -265,8 +265,6 @@ public class KMACXOF256 {
 			while ((tarLen + addZeroes) / 8 % w != 0) {
 				addZeroes += 8;
 			}
-			System.out.println("addZeroes " +addZeroes);
-			System.out.println("tarLen: " + tarLen);
 
 			byte[] ret = new byte[tarLen + addZeroes];
 			int i;
