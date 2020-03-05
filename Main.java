@@ -1,83 +1,59 @@
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Main {
 
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-		
-		//System.out.println("Enter the message to make some gross nasty boi shit");
-		//Scanner s = new Scanner(System.in);
-		//String encryptMeDaddy = s.nextLine();
-		//byte[] encryptMeDaddy = {00, 01, 02, 03};
-		byte[] encryptMeDaddy = {00, 01, 00, 11};
-		byte[] testKey = {0b0};
-		String diveyString = "Email Signature";
-		//s.close();
-		
-		//Key of 0 (as bigint)
-		KMACXOF256 kmac = new KMACXOF256(testKey, encryptMeDaddy, 1, diveyString);
-		System.out.println("Result: \n" + kmac.getData());
 
-		
-		System.out.println("Cryptography Project by Max England, and Tyler Lorella");
-		System.out.println("Enter digit for mode of operation: "
-				+ "1-Hash");
+		System.out.println("---Cryptography Project by Max England, and Tyler Lorella---");
+		System.out.println("--Enter digit for mode of operation: "
+				+ "\n0-Test Vector"
+				+ "\n1-Hash \n2-MAC \n3-Symmetric Encryption \n4-Symmetric Decryption "
+				+ "\n5-Generate Schnorr / ECDHIES key "
+				+ "\n6-Encrypt under Schnorr / ECDHIES key"
+				+ "\n7-Decrypt cryptogram");
 		Scanner scanner = new Scanner(System.in);
 		String mode = scanner.nextLine();
 		
 		
-		System.out.println("Enter digit for input method: "
-				+ "1-File Input; 2-String Input");
+		System.out.println("--Enter digit for input method: "
+				+ "1-File Input \n"
+				+ "2-Console Input");
 		String inputMethod = scanner.nextLine();
-		
-		byte [] data = {0x01};
-		
-		if (inputMethod.equals("1")) {
-			System.out.print("Enter file path: ");
-			String filePath = scanner.nextLine();
-			try {
-				ArrayList<Byte> arrayData = new ArrayList<Byte>();
-				FileInputStream fileInput = new FileInputStream(filePath);
-				byte section = 0b0;
-				while (section != -1) {
-					section = (byte) fileInput.read();
-					arrayData.add(section);
-				}
-				data = convertToArray(arrayData);
-				fileInput.close();
-			} catch (Exception e) {
-				System.out.println("Invalid file input");
-				System.exit(0);
-			}
-		} else {
-			System.out.print("Enter data: ");
-			String stringInput = scanner.nextLine();
-			data = stringInput.getBytes();
-		}
-		//System.out.println(input);
+		scanner.close();
 		
 		//modes
 		//1 -  Hash - 
-		if (mode.equals("1")) {
+		if (mode.equals("0")) {
+			printTestVector();
+	 	} else if (mode.equals("1")) {
+			byte[] data = askForData(inputMethod);
 			byte[] crypt = hashKMAC(data);
-			System.out.println("length: " + crypt.length);
 			printByteData(crypt);
 		} else if (mode.equals("2")) {
-			System.out.print("Enter Key:");
-			String key = scanner.nextLine();
-			byte[] crypt = macKMAC(key.getBytes(), data);
+			byte[] key = askForKey(inputMethod);
+			byte[] data = askForData(inputMethod);
+			byte[] crypt = macKMAC(key, data);
 			printByteData(crypt);
 		} else if (mode.equals("3")) {
 			
 		}
-		
-		
-		scanner.close();
+	}
+	
+	
+	/* ------------------------------------------
+	 * 			Modes of Operation Methods
+	 * ------------------------------------------*/
+	
+	private static void printTestVector() {
+		System.out.println("--------Test Vector Start-------");
+		byte[] testData = {00, 01, 00, 11};
+		byte[] testKey = {0b0};
+		String diveyString = "Email Signature";
+		KMACXOF256 kmac = new KMACXOF256(testKey, testData, 1, diveyString);
+		printByteData(kmac.getData());
+		System.out.println("--------Test Vector End-------");
 	}
 	
 	private static byte[] hashKMAC(byte[] data) {
@@ -90,14 +66,74 @@ public class Main {
 		KMACXOF256 sponge = new KMACXOF256(key, data, 512, "T");
 		return sponge.getData();
 	}
+
+	/* ------------------------------------------
+	 * 			Input Assistance Methods
+	 * ------------------------------------------*/
+	
+	private static byte[] askForKey(String inputChoice) {
+		System.out.println();
+		if (inputChoice.equals("1")) {
+			System.out.print("Enter key filepath: ");
+			return getFileInput();
+		} else {
+			System.out.print("Enter key: ");
+			return getConsoleInput();
+		}
+	}
+	
+	private static byte[] askForData(String inputChoice) {
+		System.out.println();
+		if (inputChoice.equals("1")) {
+			System.out.print("Enter data filepath: ");
+			return getFileInput();
+		} else {
+			System.out.print("Enter data: ");
+			return getConsoleInput();
+		}
+	}
+	
+	private static byte[] getConsoleInput() {
+		Scanner scanner = new Scanner(System.in);
+		String stringInput = scanner.nextLine();
+		scanner.close();
+		return stringInput.getBytes();
+	}
+	
+	private static byte[] getFileInput() {
+		//System.out.print("Enter file path: ");
+		Scanner scanner = new Scanner(System.in);
+		byte[] fileData = {0b0};
+		String filePath = scanner.nextLine();
+		try {
+			ArrayList<Byte> arrayData = new ArrayList<Byte>();
+			FileInputStream fileInput = new FileInputStream(filePath);
+			byte section = 0b0;
+			while (section != -1) {
+				section = (byte) fileInput.read();
+				arrayData.add(section);
+			}
+			fileData = convertToArray(arrayData);
+			fileInput.close();
+		} catch (Exception e) {
+			System.out.println("Invalid file input, Exiting Program");
+			System.exit(0);
+		}
+		System.out.println();
+		scanner.close();
+		return fileData;
+	}
+	
+	/* ------------------------------------------
+	 * 				Auxillary Methods
+	 * ------------------------------------------*/
+	
 	
 	private static void printByteData(byte[] data) {
 		String toBitString = "";
 		for (int index = 0; index < data.length; index++) {
-			toBitString = toBitString + "byte index: " + index + ", byte String: " + byte2String(data[index]) + 
-					", decimal: " + Integer.toUnsignedString(data[index]) + "\n";
+			toBitString = toBitString + " " + byte2String(data[index]);
 		}
-
 		System.out.println("Result: " + toBitString);
 	}
 	
