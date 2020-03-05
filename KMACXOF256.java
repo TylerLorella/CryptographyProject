@@ -138,13 +138,13 @@ public class KMACXOF256 {
 
 			byte[] newX = new byte[x1.length + x2.length];
 			int index = 0;
-			for (byte b : x1) {
-				newX[index] = x1[index];
+			for (byte b : n) {
+				newX[index] = n[index];
 				index++;
 			}
 
-			for (byte b : x2) {
-				newX[index] = x2[index];
+			for (byte b : s) {
+				newX[index] = s[index];
 				index++;
 			}
 
