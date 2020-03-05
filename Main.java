@@ -28,14 +28,14 @@ public class Main {
 		System.out.println("Enter digit for mode of operation: \n"
 				+ "1-Hash");
 		Scanner scanner = new Scanner(System.in);
-		int mode = scanner.nextInt();
+		String mode = scanner.nextLine();
 		System.out.println("Enter digit for input method: \n"
 				+ "1-File Input; 2-String Input");
-		int inputMethod = scanner.nextInt();
+		String inputMethod = scanner.nextLine();
 		
 		byte [] data = {0x01};
 		
-		if (inputMethod == 1) {
+		if (inputMethod.equals("1")) {
 			System.out.print("Enter file path: ");
 			String filePath = scanner.nextLine();
 			try {
@@ -61,9 +61,9 @@ public class Main {
 		
 		//modes
 		//1 -  Hash - 
-		if (mode == 1) {
+		if (mode.equals("1")) {
 			System.out.println(hashKMAC(data));
-		} else if (mode == 2) {
+		} else if (mode.equals("2")) {
 			System.out.print("Enter Key:");
 			String key = scanner.nextLine();
 			System.out.println(macKMAC(key.getBytes(), data));
