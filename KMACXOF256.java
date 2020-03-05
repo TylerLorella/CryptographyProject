@@ -259,7 +259,7 @@ public class KMACXOF256 {
 			for (int i = 0; i < z1.length; i++) {
 				z[i] = z1[i];
 			}
-			for (int i = z1.length; i < z.length; i++) {
+			for (int i = z1.length-1; i < z.length; i++) {
 				z[i] = X[i];
 			}
 
