@@ -52,7 +52,7 @@ public class KMACXOF256 {
 	private int mdlen; //message digest length?
 
 	//
-	private int rsiz;
+	private int rsiz = 72;
 
 	//Keeps track of which bytes have already been operated on in between update steps
 	private int pt;
@@ -333,7 +333,7 @@ public class KMACXOF256 {
 				myState[i] = BigInteger.ZERO;
 
 		//	this.mdlen = mdlen;
-			rsiz = 200 - 2 * mdlen;
+		//	rsiz = 200 - 2 * mdlen;
 			pt = 0;
 		}
 
@@ -433,6 +433,7 @@ public class KMACXOF256 {
 		byte[] sha3_final() {
 
 			byte[] md = new byte[mdlen];
+			int curr = 0;
 			
 			byte[] stateBytes = stateAsBytes(myState);
 
@@ -442,13 +443,18 @@ public class KMACXOF256 {
 			keccakf(myState);
 
 			stateBytes = stateAsBytes(myState);
-			myState = stateBigInts(stateBytes);
 
-			for (int i = 0; i < mdlen; i++) {
-				md[i] = stateBytes[i];
+			for (int x = 0; x < (mdlen / rsiz); x++) {
+			for (int i = 0; i < rsiz; i++) {
+				md[curr + i] = stateBytes[i];
+				}
+			curr += rsiz;
+			keccakf(myState);
+			stateBytes = stateAsBytes(myState);
 			}
-
-
+			for (int i = 0; i < mdlen % rsiz; i++) {
+				md[curr+i] = stateBytes[i];
+			}
 
 			return md;
 		}
