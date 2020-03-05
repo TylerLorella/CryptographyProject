@@ -1,8 +1,13 @@
 import java.io.FileInputStream;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+import javax.xml.crypto.Data;
+
 public class Main {
+	
+	final static Scanner scanner = new Scanner(System.in);
 
 	public static void main(String[] args) {
 
@@ -13,15 +18,15 @@ public class Main {
 				+ "\n5-Generate Schnorr / ECDHIES key "
 				+ "\n6-Encrypt under Schnorr / ECDHIES key"
 				+ "\n7-Decrypt cryptogram");
-		Scanner scanner = new Scanner(System.in);
+		//Scanner scanner = new Scanner(System.in);
 		String mode = scanner.nextLine();
 		
 		
-		System.out.println("--Enter digit for input method: "
+		System.out.println("--Enter digit for input method: \n"
 				+ "1-File Input \n"
 				+ "2-Console Input");
 		String inputMethod = scanner.nextLine();
-		scanner.close();
+		
 		
 		//modes
 		//1 -  Hash - 
@@ -37,8 +42,11 @@ public class Main {
 			byte[] crypt = macKMAC(key, data);
 			printByteData(crypt);
 		} else if (mode.equals("3")) {
-			
+			byte[] key = askForKey(inputMethod);
+			byte[] data = askForData(inputMethod);
+			symmetricEncryption(key, data);
 		}
+		scanner.close();
 	}
 	
 	
@@ -51,8 +59,10 @@ public class Main {
 		byte[] testData = {00, 01, 00, 11};
 		byte[] testKey = {0b0};
 		String diveyString = "Email Signature";
-		KMACXOF256 kmac = new KMACXOF256(testKey, testData, 1, diveyString);
-		printByteData(kmac.getData());
+		KMACXOF256 kmac = new KMACXOF256(testKey, testData, 256, diveyString);
+		byte[] result = kmac.getData();
+		System.out.println("Bytes of data: " + result.length);
+		printByteData(result);
 		System.out.println("--------Test Vector End-------");
 	}
 	
@@ -67,6 +77,40 @@ public class Main {
 		return sponge.getData();
 	}
 
+	private static void symmetricEncryption(byte[] key, byte[] data) {
+		//getting a random 512 bit value
+		SecureRandom secureRandom = new SecureRandom();
+		byte[] initializationValue = new byte[64];
+		secureRandom.nextBytes(initializationValue);
+		
+		byte[] z = concatinateBytes(initializationValue, key); //key
+		
+		byte[] keka = (new KMACXOF256(z, ("").getBytes(), 1024, "S")).getData(); 
+		byte[] ke = new byte[keka.length/2];
+		byte[] ka = new byte[keka.length/2];
+		for (int index = 0; index < keka.length/2; index++) {
+			ke[index] = keka[index];
+		}
+		for (int index = keka.length/2; index < keka.length; index++) {
+			ka[index - keka.length/2] = keka[index]; 
+		}
+		
+		//encrpted message
+		byte[] c = xorBytes((new KMACXOF256(ke, ("").getBytes(), data.length * 8, "SKE")).getData(), data);
+		
+		//MAC
+		byte[] t = (new KMACXOF256(ka, data, 512, "SKA")).getData();
+		
+		System.out.print("\nz: ");
+		printByteData(z);
+		System.out.print("\nc: ");
+		printByteData(c);
+		System.out.print("\nt: ");
+		printByteData(t);
+		
+	}
+	
+	
 	/* ------------------------------------------
 	 * 			Input Assistance Methods
 	 * ------------------------------------------*/
@@ -94,15 +138,15 @@ public class Main {
 	}
 	
 	private static byte[] getConsoleInput() {
-		Scanner scanner = new Scanner(System.in);
+		//Scanner scanner = new Scanner(System.in);
 		String stringInput = scanner.nextLine();
-		scanner.close();
+		//scanner.close();
 		return stringInput.getBytes();
 	}
 	
 	private static byte[] getFileInput() {
 		//System.out.print("Enter file path: ");
-		Scanner scanner = new Scanner(System.in);
+		//Scanner scanner = new Scanner(System.in);
 		byte[] fileData = {0b0};
 		String filePath = scanner.nextLine();
 		try {
@@ -120,14 +164,48 @@ public class Main {
 			System.exit(0);
 		}
 		System.out.println();
-		scanner.close();
+		//scanner.close();
 		return fileData;
 	}
 	
+	
 	/* ------------------------------------------
-	 * 				Auxillary Methods
+	 * 			Output Assistance Methods
 	 * ------------------------------------------*/
 	
+	private static int askOutputMethod() {
+		System.out.println("How would you like to output the results?\n"
+				+ "");
+		
+		
+		return 0;
+	}
+	
+	
+	/* ------------------------------------------
+	 * 				Auxiliary Methods
+	 * ------------------------------------------*/
+
+	private static byte[] xorBytes(byte[] data1, byte[] data2) {
+		if (data1.length != data2.length) System.out.println(data1.length + " != " + data2.length);
+		byte[] result = new byte[data1.length];
+		for (int index = 0; index < data1.length; index++) {
+			result[index] = (byte) (data1[index] ^ data2[index]);
+		}
+		return result;
+	}
+	
+	private static byte[] concatinateBytes(byte[] data1, byte[] data2) {
+		byte[] toReturn = new byte[data1.length + data2.length];
+		int indexCounter = 0;
+		for (byte element: data1) {
+			toReturn[indexCounter++] = element; 
+		}
+		for (byte element: data2) {
+			toReturn[indexCounter++] = element; 
+		}
+		return toReturn;
+	}
 	
 	private static void printByteData(byte[] data) {
 		String toBitString = "";
