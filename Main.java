@@ -1,12 +1,14 @@
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-import javax.xml.crypto.Data;
-
 public class Main {
-	
+
 	final static Scanner scanner = new Scanner(System.in);
 
 	public static void main(String[] args) {
@@ -20,19 +22,19 @@ public class Main {
 				+ "\n7-Decrypt cryptogram");
 		//Scanner scanner = new Scanner(System.in);
 		String mode = scanner.nextLine();
-		
-		
+
+
 		System.out.println("--Enter digit for input method: \n"
 				+ "1-File Input \n"
 				+ "2-Console Input");
 		String inputMethod = scanner.nextLine();
-		
-		
+
+
 		//modes
 		//1 -  Hash - 
 		if (mode.equals("0")) {
 			printTestVector();
-	 	} else if (mode.equals("1")) {
+		} else if (mode.equals("1")) {
 			byte[] data = askForData(inputMethod);
 			byte[] crypt = hashKMAC(data);
 			printByteData(crypt);
@@ -46,14 +48,17 @@ public class Main {
 			byte[] data = askForData(inputMethod);
 			symmetricEncryption(key, data);
 		}
+		
+		
 		scanner.close();
+		System.out.println("---Done!---");
 	}
-	
-	
+
+
 	/* ------------------------------------------
 	 * 			Modes of Operation Methods
 	 * ------------------------------------------*/
-	
+
 	private static void printTestVector() {
 		System.out.println("--------Test Vector Start-------");
 		byte[] testData = {00, 01, 00, 11};
@@ -65,13 +70,13 @@ public class Main {
 		printByteData(result);
 		System.out.println("--------Test Vector End-------");
 	}
-	
+
 	private static byte[] hashKMAC(byte[] data) {
 		String key = "";
 		KMACXOF256 sponge = new KMACXOF256(key.getBytes(), data, 512, "D"); 
 		return sponge.getData();
 	}
-	
+
 	private static byte[] macKMAC(byte[] key, byte[] data) {
 		KMACXOF256 sponge = new KMACXOF256(key, data, 512, "T");
 		return sponge.getData();
@@ -82,9 +87,9 @@ public class Main {
 		SecureRandom secureRandom = new SecureRandom();
 		byte[] initializationValue = new byte[64];
 		secureRandom.nextBytes(initializationValue);
-		
+
 		byte[] z = concatinateBytes(initializationValue, key); //key
-		
+
 		byte[] keka = (new KMACXOF256(z, ("").getBytes(), 1024, "S")).getData(); 
 		byte[] ke = new byte[keka.length/2];
 		byte[] ka = new byte[keka.length/2];
@@ -94,27 +99,34 @@ public class Main {
 		for (int index = keka.length/2; index < keka.length; index++) {
 			ka[index - keka.length/2] = keka[index]; 
 		}
-		
+
 		//encrpted message
 		byte[] c = xorBytes((new KMACXOF256(ke, ("").getBytes(), data.length * 8, "SKE")).getData(), data);
-		
+
 		//MAC
 		byte[] t = (new KMACXOF256(ka, data, 512, "SKA")).getData();
-		
-		System.out.print("\nz: ");
-		printByteData(z);
-		System.out.print("\nc: ");
-		printByteData(c);
-		System.out.print("\nt: ");
-		printByteData(t);
-		
+
+		String outputChoice = askOutputMethod();
+		if (outputChoice.equals("1")) {
+			String folderPath = askOutputFilesLocation();
+			outputFile(folderPath + "\\z.txt", z);
+			outputFile(folderPath + "\\c.txt", c);
+			outputFile(folderPath + "\\t.txt", t);
+		} else { 
+			System.out.print("\nz: ");
+			printByteData(z);
+			System.out.print("\nc: ");
+			printByteData(c);
+			System.out.print("\nt: ");
+			printByteData(t);
+		}
 	}
-	
-	
+
+
 	/* ------------------------------------------
 	 * 			Input Assistance Methods
 	 * ------------------------------------------*/
-	
+
 	private static byte[] askForKey(String inputChoice) {
 		System.out.println();
 		if (inputChoice.equals("1")) {
@@ -125,7 +137,7 @@ public class Main {
 			return getConsoleInput();
 		}
 	}
-	
+
 	private static byte[] askForData(String inputChoice) {
 		System.out.println();
 		if (inputChoice.equals("1")) {
@@ -136,14 +148,14 @@ public class Main {
 			return getConsoleInput();
 		}
 	}
-	
+
 	private static byte[] getConsoleInput() {
 		//Scanner scanner = new Scanner(System.in);
 		String stringInput = scanner.nextLine();
 		//scanner.close();
 		return stringInput.getBytes();
 	}
-	
+
 	private static byte[] getFileInput() {
 		//System.out.print("Enter file path: ");
 		//Scanner scanner = new Scanner(System.in);
@@ -167,21 +179,40 @@ public class Main {
 		//scanner.close();
 		return fileData;
 	}
-	
-	
+
+
 	/* ------------------------------------------
 	 * 			Output Assistance Methods
 	 * ------------------------------------------*/
-	
-	private static int askOutputMethod() {
+
+	private static String askOutputMethod() {
 		System.out.println("How would you like to output the results?\n"
-				+ "");
-		
-		
-		return 0;
+				+ "1-File Output \n2-Console Outut");
+		return scanner.nextLine();
 	}
-	
-	
+
+	private static String askOutputFilesLocation() {
+		System.out.println("Output folder path : ");
+		return scanner.nextLine();
+	}
+
+	private static void outputFile(String filePath, byte[] data) {
+		try {
+			FileOutputStream writer = new FileOutputStream(new File(filePath));
+			writer.write(data);
+			writer.close();
+		} catch (FileNotFoundException e) {
+			System.out.println("invalid file location");
+			e.printStackTrace();
+			System.exit(0);
+		} catch (IOException e) {
+			System.out.println("invalid print");
+			e.printStackTrace();
+			System.exit(0);
+		}
+	}
+
+
 	/* ------------------------------------------
 	 * 				Auxiliary Methods
 	 * ------------------------------------------*/
@@ -194,7 +225,7 @@ public class Main {
 		}
 		return result;
 	}
-	
+
 	private static byte[] concatinateBytes(byte[] data1, byte[] data2) {
 		byte[] toReturn = new byte[data1.length + data2.length];
 		int indexCounter = 0;
@@ -206,7 +237,7 @@ public class Main {
 		}
 		return toReturn;
 	}
-	
+
 	private static void printByteData(byte[] data) {
 		String toBitString = "";
 		for (int index = 0; index < data.length; index++) {
@@ -214,7 +245,7 @@ public class Main {
 		}
 		System.out.println("Result: " + toBitString);
 	}
-	
+
 	private static byte[] convertToArray(ArrayList<Byte> input) {
 		byte[] toReturn = new byte[input.size()];
 		for (int index = 0; index < input.size(); index++) {
@@ -222,7 +253,7 @@ public class Main {
 		}
 		return toReturn;
 	}
-	
+
 	private static String byte2String(byte toConvert) {
 		String toReturn = "";
 
