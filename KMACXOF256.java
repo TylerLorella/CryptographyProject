@@ -54,25 +54,6 @@ public class KMACXOF256 {
 	//Keeps track of which bytes have already been operated on in between update steps
 	private int pt;
 
-
-	/**
-	 * 
-	 * @param k Key
-	 * @param m Authenticated data
-	 * @param L output byte length
-	 * @param S diversification string
-	 */
-	public KMACXOF256(final BigInteger k, final byte[] m, final int L, final String S) {
-
-		//Set ultimate output length of digest
-		mdlen = L;
-
-		sha3_init(mdlen);
-		//sha3_update(m.getBytes());
-		sha3_update(m);
-
-	}
-
 	/**
 	 * Returns KMACXOF256 of given key bitstring (byte array), data, length of desired output,
 	 * and diversification string
@@ -109,8 +90,11 @@ public class KMACXOF256 {
 				index++;
 			}
 		//TODO: Integrate
-		cSHAKE256(newX, L, "KMAC", S);
+		cSHAKE256(newX, L/8, "KMAC", S);
 	}
+	
+		//TODO: Considering this dumb bitch returns and we don't ever even care about that because it's really just an extension of the constructor,
+		//Maybe make it less stupid, you dumb whore
 		/**
 		 * Returns CSHAKE (in terms of Keccak and SHAKE256) of the given goodies
 		 * 
@@ -278,7 +262,6 @@ public class KMACXOF256 {
 			//		while ((z.length() / 8.0) % w != 0) {
 			//			z = z + "00000000";
 			//		}
-
 			return z;
 
 		}
@@ -287,7 +270,6 @@ public class KMACXOF256 {
 			byte[] messageDigest = sha3_final();
 			return messageDigest;
 		}
-
 
 		public String getStringData() {
 			byte[] messageDigest = sha3_final();
@@ -363,7 +345,10 @@ public class KMACXOF256 {
 			for (int i = 0; i < 25; i++)
 				myState[i] = BigInteger.ZERO;
 
-			this.mdlen = mdlen;
+		//	this.mdlen = mdlen;
+			System.out.println("Setting rsiz: ");
+			System.out.println("message digest length (bytes) : "+ mdlen);
+			System.out.println("r: " + (200 - 2 * mdlen));
 			rsiz = 200 - 2 * mdlen;
 			pt = 0;
 		}
@@ -464,7 +449,7 @@ public class KMACXOF256 {
 		byte[] sha3_final() {
 
 			byte[] md = new byte[mdlen];
-
+			
 			byte[] stateBytes = stateAsBytes(myState);
 
 			stateBytes[pt] ^= 0x06;
