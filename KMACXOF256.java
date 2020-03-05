@@ -288,9 +288,14 @@ public class KMACXOF256 {
 			return z;
 
 		}
+		
+		public byte[] getData() {
+			byte[] messageDigest = sha3_final();
+			return messageDigest;
+		}
 
 
-		public String getData() {
+		public String getStringData() {
 			byte[] messageDigest = sha3_final();
 			//return sha3_final();
 			String toReturn = "";
