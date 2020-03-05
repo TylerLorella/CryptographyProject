@@ -13,7 +13,7 @@ public class KMACXOF256 {
 
 	//Constants
 
-	//Rount constants (BigInteger) 
+	//Round constants (BigInteger) 
 	private BigInteger[] RC = new BigInteger[24];
 
 	//String representations of the constants; to populate RC on radix 16
@@ -87,7 +87,7 @@ public class KMACXOF256 {
 		//Initialize round constants
 		for (int i = 0; i < 24; i++) {
 			RC[i] = new BigInteger(toRC[i], 16);
-
+		}
 			//System.out.println("Number: " + RC[i]);
 
 			byte[] x1 = bytepad(encode_string(K), 168);
@@ -108,11 +108,9 @@ public class KMACXOF256 {
 				newX[index] = b;
 				index++;
 			}
-
-			//What does she doooooo//TODO: Integrate
-			cSHAKE256(newX, L, "KMAC", S);
-		}
-
+		//TODO: Integrate
+		cSHAKE256(newX, L, "KMAC", S);
+	}
 		/**
 		 * Returns CSHAKE (in terms of Keccak and SHAKE256) of the given goodies
 		 * 
