@@ -69,7 +69,6 @@ public class KMACXOF256 {
 		for (int i = 0; i < 24; i++) {
 			RC[i] = new BigInteger(toRC[i], 16);
 		}
-			//System.out.println("Number: " + RC[i]);
 
 			byte[] x1 = bytepad(encode_string(K), 168);
 			byte[] x3 = right_encode(BigInteger.ZERO);
@@ -271,24 +270,6 @@ public class KMACXOF256 {
 			return messageDigest;
 		}
 
-		public String getStringData() {
-			byte[] messageDigest = sha3_final();
-			//return sha3_final();
-			String toReturn = "";
-			//for (byte element: messageDigest) toReturn = toReturn + " " + Integer.toBinaryString(element);
-			//for (byte element: messageDigest) System.out.println( element );
-
-
-			for (int index = 0; index < messageDigest.length; index++) {
-				//toReturn = toReturn + "byte index: " + index + ", byte String: " + Integer.toBinaryString(messageDigest[index]) + 
-				//		", decimal: " + Integer.toUnsignedString(messageDigest[index]) + "\n";
-				toReturn = toReturn + "byte index: " + index + ", byte String: " + byte2String(messageDigest[index]) + 
-						", decimal: " + Integer.toUnsignedString(messageDigest[index]) + "\n";
-			}
-
-			return toReturn;
-		}
-
 		//return? where is state changed
 		public void keccakf(BigInteger[] state) {
 
@@ -346,9 +327,6 @@ public class KMACXOF256 {
 				myState[i] = BigInteger.ZERO;
 
 		//	this.mdlen = mdlen;
-			System.out.println("Setting rsiz: ");
-			System.out.println("message digest length (bytes) : "+ mdlen);
-			System.out.println("r: " + (200 - 2 * mdlen));
 			rsiz = 200 - 2 * mdlen;
 			pt = 0;
 		}
@@ -462,7 +440,6 @@ public class KMACXOF256 {
 
 			for (int i = 0; i < mdlen; i++) {
 				md[i] = stateBytes[i];
-				//System.out.println();
 			}
 
 
