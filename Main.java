@@ -3,6 +3,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -19,17 +20,19 @@ public class Main {
 				+ "\n1-Hash \n2-MAC \n3-Symmetric Encryption \n4-Symmetric Decryption "
 				+ "\n5-Generate Schnorr / ECDHIES key "
 				+ "\n6-Encrypt under Schnorr / ECDHIES key"
-				+ "\n7-Decrypt cryptogram");
+				+ "\n7-Decrypt cryptogram"
+				+ "\n8-Generate Signature"
+				+ "\n9-Verify Signature");
 		String mode = scanner.nextLine();
 
 		System.out.println("--Enter digit for input method: \n"
 				+ "1-File Input \n"
 				+ "2-Console Input");
 		String inputMethod = scanner.nextLine();
-		
-		
+
+
 		String outputMethod = askOutputMethod();
-		
+
 
 		//1 -  Hash - 
 		if (mode.equals("0")) {
@@ -53,25 +56,95 @@ public class Main {
 			} else {
 				printByteData(crypt);
 			}
-		} else if (mode.equals("3")) {
+		} else if (mode.equals("3")) { //Symmetric Encryption
 			byte[] key = askForKey(inputMethod);
 			byte[] data = askForData(inputMethod);
 			symmetricEncryption(key, data, outputMethod);
-		} else if (mode.equals("4")) {
+		} else if (mode.equals("4")) { //Symmetric Decryption
 			byte[] z = askForIV(inputMethod);
 			byte[] key = askForKey(inputMethod);
 			byte[] c = askForData(inputMethod);
 			byte[] t = askForMAC(inputMethod);
-			byte[] message = symmetricDecryption(z, key, c, t, outputMethod);
+			byte[] message = symmetricDecryption(z, key, c, t);
 			if (outputMethod.equals("1")) {
 				String folderPath = askOutputFilesLocation();
 				outputFile(folderPath + "\\DecryptedMessage.txt", message);
 			} else {
 				printByteData(message);
 			}
-		} 
-		
-		
+		} else if (mode.equals("5")) { //Generate key pair
+			byte[] key = askForKey(inputMethod);
+			Point result = getKey(key);
+			if (outputMethod.equals("1")) {
+				String folderPath = askOutputFilesLocation();
+				outputFile(folderPath + "\\Point.txt", result.toByte());
+			} else {
+				printByteData(result.toByte());
+			}
+		} else if (mode.equals("6")) { //pub encrypt
+			byte[] stuff = askForPoint(inputMethod);
+			byte[] x = new byte[stuff.length - 1];
+			
+			for (int index = 0; index < x.length; index++) {
+				x[index] = stuff[index];
+			}
+			boolean isEven = stuff[stuff.length - 1] == 1;
+			
+			Point pointV = new Point(new BigInteger(x), isEven);
+			
+			byte[] data = askForData(inputMethod);
+			pubEncrypt(pointV, data, outputMethod);
+		} else if (mode.equals("7")) { //pub decrypt
+			byte[] stuff = askForPoint(inputMethod);
+			byte[] x = new byte[stuff.length - 1];
+			
+			for (int index = 0; index < x.length; index++) {
+				x[index] = stuff[index];
+			}
+			boolean isEven = stuff[stuff.length - 1] == 1;
+			Point Z = new Point(new BigInteger(x), isEven);
+			
+			byte[] key = askForKey(inputMethod);
+			byte[] c = askForData(inputMethod);
+			byte[] t = askForMAC(inputMethod);
+			byte[] message = pubDecrypt(key, Z, c, t);
+			
+			if (outputMethod.equals("1")) {
+				String folderPath = askOutputFilesLocation();
+				outputFile(folderPath + "\\DecryptedMessage.txt", message);
+			} else {
+				printByteData(message);
+			}
+		} else if (mode.equals("8")) {
+			byte[] data = askForData(inputMethod);
+			byte[] key = askForKey(inputMethod);
+			byte[] signature = signatureGen(data, key);
+			
+			if (outputMethod.equals("1")) {
+				String folderPath = askOutputFilesLocation();
+				outputFile(folderPath + "\\Signature.txt", signature);
+			} else {
+				printByteData(signature);
+			}
+		} else if (mode.equals("9")) {
+			byte[] signature = askForSignature(inputMethod);
+			byte[] data = askForData(inputMethod);
+			
+			byte[] stuff = askForPoint(inputMethod);
+			byte[] x = new byte[stuff.length - 1];
+			
+			for (int index = 0; index < x.length; index++) {
+				x[index] = stuff[index];
+			}
+			boolean isEven = stuff[stuff.length - 1] == 1;
+			Point V = new Point(new BigInteger(x), isEven);
+			
+			boolean result = signatureVerify(signature, data, V);
+			if (result) System.out.println("SIGNATURE ACCECPTABLE");
+			else System.out.println("SIGNATURE UNACCECPTABLE");
+		}
+
+
 		scanner.close();
 		System.out.println("---Done!---");
 	}
@@ -111,7 +184,7 @@ public class Main {
 		secureRandom.nextBytes(initializationValue);
 
 		byte[] keka = (new KMACXOF256(concatinateBytes(initializationValue, key)
-										, ("").getBytes(), 1024, "S")).getData(); 
+				, ("").getBytes(), 1024, "S")).getData(); 
 		byte[] ke = new byte[keka.length/2];
 		byte[] ka = new byte[keka.length/2];
 		for (int index = 0; index < keka.length/2; index++) {
@@ -141,7 +214,7 @@ public class Main {
 		}
 	}
 
-	private static byte[] symmetricDecryption(byte[] iv, byte[] key, byte[] c, byte[] t, String outputMethod) {
+	private static byte[] symmetricDecryption(byte[] iv, byte[] key, byte[] c, byte[] t) {
 		byte[] keka = (new KMACXOF256(concatinateBytes(iv, key), ("").getBytes(), 1024, "S")).getData(); 
 		byte[] ke = new byte[keka.length/2];
 		byte[] ka = new byte[keka.length/2];
@@ -151,10 +224,10 @@ public class Main {
 		for (int index = keka.length/2; index < keka.length; index++) {
 			ka[index - keka.length/2] = keka[index]; 
 		}
-		
+
 		byte[] m = xorBytes((new KMACXOF256(ke, ("").getBytes(), c.length * 8, "SKE")).getData(), c);
 		byte[] tPrime = (new KMACXOF256(ka, m, 512, "SKA")).getData();
-		
+
 		if (equalByteArrays(tPrime, t)) {
 			System.out.println("OUTPUT ACCEPTED");
 			return m;
@@ -163,6 +236,154 @@ public class Main {
 			return null;
 		}
 	}
+
+	private static Point getKey(byte[] pw) {
+
+		byte[] secretBytes = (new KMACXOF256(pw, "".getBytes(), 512, "K").getData());
+
+		BigInteger s = new BigInteger(secretBytes);
+		s = s.multiply(BigInteger.valueOf(4));
+
+		BigInteger newX = Point.G.getX().multiply(s);
+		BigInteger newY = Point.G.getY().multiply(s);
+
+		Point V = new Point(newX, newY);
+
+		return V;
+	}
+
+	private static void pubEncrypt(Point V, byte[] m, String outputChoice) {
+
+		SecureRandom secureRandom = new SecureRandom();
+		byte[] randomVals = new byte[64];
+		secureRandom.nextBytes(randomVals);
+
+		BigInteger k = new BigInteger(randomVals);
+		k = k.multiply(BigInteger.valueOf(4));
+
+		BigInteger newX =  k.multiply(V.getX());
+		BigInteger newY = k.multiply(V.getY());
+
+		Point W = new Point(newX, newY);
+
+		BigInteger zX = k.multiply(Point.G.getX());
+		BigInteger zY = k.multiply(Point.G.getY());
+
+		Point Z = new Point(zX, zY);
+
+		byte[] keka = (new KMACXOF256(W.getX().toByteArray(), ("").getBytes(), 1024, "P")).getData(); 
+		byte[] ke = new byte[keka.length/2];
+		byte[] ka = new byte[keka.length/2];
+		for (int index = 0; index < keka.length/2; index++) {
+			ke[index] = keka[index];
+		}
+		for (int index = keka.length/2; index < keka.length; index++) {
+			ka[index - keka.length/2] = keka[index]; 
+		}
+
+		byte[] mask = new KMACXOF256(ke, "".getBytes(), m.length, "PKE").getData();
+		byte[] c = xorBytes(m, mask);
+		byte[] t = new KMACXOF256(ka, m, 512, "PKA").getData();
+
+		if (outputChoice.equals("1")) {
+			String folderPath = askOutputFilesLocation();
+			outputFile(folderPath + "\\z.txt", Z.toByte());
+			outputFile(folderPath + "\\c.txt", c);
+			outputFile(folderPath + "\\t.txt", t);
+		} else { 
+			System.out.print("\nz: ");
+			printByteData(Z.toByte());
+			System.out.print("\nc: ");
+			printByteData(c);
+			System.out.print("\nt: ");
+			printByteData(t);
+		}
+		
+	}
+
+	private static byte[] pubDecrypt(byte[] pw, Point Z, byte[] c, byte[] t) {
+		BigInteger s = new BigInteger(new KMACXOF256(pw, "".getBytes(), 512, "K").getData());
+		s = s.multiply(BigInteger.valueOf(4));
+
+		BigInteger wX = s.multiply(Z.getX());
+		BigInteger wY = s.multiply(Z.getY());
+
+		Point W = new Point(wX, wY);
+
+		byte[] keka = (new KMACXOF256(W.getX().toByteArray(), ("").getBytes(), 1024, "P")).getData(); 
+		byte[] ke = new byte[keka.length/2];
+		byte[] ka = new byte[keka.length/2];
+		for (int index = 0; index < keka.length/2; index++) {
+			ke[index] = keka[index];
+		}
+		for (int index = keka.length/2; index < keka.length; index++) {
+			ka[index - keka.length/2] = keka[index]; 
+		}
+
+		byte[] mask = new KMACXOF256(ke, "".getBytes(), c.length, "PKE").getData();
+		byte[] m = xorBytes(c, mask);
+		byte[] t2 = new KMACXOF256(ka, m, 512, "PKA").getData();
+
+		//if t = t2, return c; otherwise the message is not valid :(
+		boolean equiv = true;
+		if (t.length != t2.length) equiv = false;
+		for (int i = 0; i < t.length; i++) {
+			if (t[i] != t2[i]) equiv = false;
+		}
+
+		if (equiv) {
+			System.out.println("OUTPUT ACCEPTED");
+			return m;
+		}
+		else {
+			System.out.println("OUTPUT UNACCEPTABLE");
+			return null;
+		}
+	}
+
+	private static byte[] signatureGen(byte[] m, byte[] pw){
+
+		BigInteger s = new BigInteger(new KMACXOF256(pw, "".getBytes(), 512, "K").getData());
+		s.multiply(BigInteger.valueOf(4));
+
+		BigInteger k = new BigInteger(new KMACXOF256(s.toByteArray(), m, 512, "N").getData());
+		k.multiply(BigInteger.valueOf(4));
+
+		BigInteger uX = k.multiply(Point.G.getX());
+
+		BigInteger h = new BigInteger(new KMACXOF256(uX.toByteArray(), m, 512, "T").getData());
+		BigInteger z = k.subtract(h.multiply(s)).mod(Point.r);
+
+		return (concatinateBytes(h.toByteArray(), z.toByteArray()));
+
+	}
+
+	private static boolean signatureVerify(byte[] hz, byte[] m, Point V) {
+
+		byte[] h = new byte[512];
+		byte[] z = new byte[hz.length -512];
+		for (int i = 0; i < h.length; i++) {
+			h[i] = hz[i];
+		}
+		for (int i = 0; i < z.length; i++) {
+			z[i] = hz[512+i];
+		}
+
+		BigInteger hVal = new BigInteger(h);
+		BigInteger zVal = new BigInteger(z);
+
+		BigInteger uX = zVal.multiply(Point.G.getX()).add(hVal.multiply(V.getX()));
+		byte[] test = new KMACXOF256(uX.toByteArray(), m, 512, "T").getData();
+
+		boolean ret = true;
+		if (test.length != h.length) ret = false;
+		for (int i = 0; i < h.length; i++) {
+			if (h[i] != test[i]) ret = false;
+		}
+
+		return ret;
+	}
+
 
 	/* ------------------------------------------
 	 * 			Input Assistance Methods
@@ -178,7 +399,7 @@ public class Main {
 			return getConsoleInput();
 		}
 	}
-	
+
 	private static byte[] askForKey(String inputChoice) {
 		System.out.println();
 		if (inputChoice.equals("1")) {
@@ -208,6 +429,30 @@ public class Main {
 			return getFileInput();
 		} else {
 			System.out.print("Enter mac: ");
+			return getConsoleInput();
+		}
+	}
+
+	private static byte[] askForPoint(String inputChoice) {
+		System.out.println();
+		if (inputChoice.equals("1")) {
+			System.out.print("Enter Point filepath: ");
+			return getFileInput();
+			
+		} else {
+			System.out.print("Enter Point: ");
+			return getConsoleInput();
+		}
+	}
+	
+	private static byte[] askForSignature(String inputChoice) {
+		System.out.println();
+		if (inputChoice.equals("1")) {
+			System.out.print("Enter Signature filepath: ");
+			return getFileInput();
+			
+		} else {
+			System.out.print("Enter Signature: ");
 			return getConsoleInput();
 		}
 	}
@@ -280,6 +525,7 @@ public class Main {
 	 * 				Auxiliary Methods
 	 * ------------------------------------------*/
 
+	
 	private static boolean equalByteArrays(byte[] data1, byte[] data2) {
 		if (data1.length != data2.length) return false;
 		for (int index = 0; index < data1.length; index++) {
@@ -287,7 +533,7 @@ public class Main {
 		}
 		return true;
 	}
-	
+
 	private static byte[] xorBytes(byte[] data1, byte[] data2) {
 		if (data1.length != data2.length) System.out.println(data1.length + " != " + data2.length);
 		byte[] result = new byte[data1.length];
@@ -325,7 +571,7 @@ public class Main {
 		return toReturn;
 	}
 
-	
+
 	private static String byte2String(byte toConvert) {
 		String toReturn = "";
 

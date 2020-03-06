@@ -108,6 +108,26 @@ public class Point {
 		
 	}
 	
+	
+	/**
+	 * Converts the current point object into a byte[] representation where the last byte is a 1
+	 *  if the y value is odd, other y is even.
+	 * @return a byte[]
+	 */
+	public byte[] toByte() {
+		byte[] xBytes = x.toByteArray();
+		byte ybit = 0b1;
+		if (y.mod(BigInteger.valueOf(2)).equals(BigInteger.ZERO)) {
+			ybit = 0b0;
+		}
+		byte[] toReturn = new byte[xBytes.length + 1];
+		for (int index = 0; index < xBytes.length; index++) {
+			toReturn[index] = xBytes[index];
+		}
+		toReturn[xBytes.length] = ybit;
+		return toReturn;
+	}
+	
 	@Override
 	public boolean equals(Object other) {
 		
