@@ -10,6 +10,8 @@ public class Point {
 	//Edwards curve constant
 	private BigInteger d = new BigInteger("-376014");
 
+	public static BigInteger r = BigInteger.valueOf(2).pow(519).subtract(new BigInteger("337554763258501705789107630418782636071904961214051226618635150085779108655765"));
+	
 	//Instance fields of the x and y coordinate values.
 	private BigInteger x;
 	private BigInteger y;
@@ -54,8 +56,8 @@ public class Point {
 		this.x = x;
 		
 		//intermediate values
-		BigInteger int1 = BigInteger.ONE.subtract(x.modPow(BigInteger.TWO, mersenne));
-		BigInteger int2 = BigInteger.ONE.add(new BigInteger("376014").multiply(x.modPow(BigInteger.TWO, mersenne)));
+		BigInteger int1 = BigInteger.ONE.subtract(x.modPow(BigInteger.valueOf(2), mersenne));
+		BigInteger int2 = BigInteger.ONE.add(new BigInteger("376014").multiply(x.modPow(BigInteger.valueOf(2), mersenne)));
 		BigInteger int3 = int1.multiply(int2.modInverse(mersenne));
 		
 		BigInteger root = sqrt(int3, mersenne, ybit);
