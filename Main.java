@@ -20,33 +20,48 @@ public class Main {
 				+ "\n5-Generate Schnorr / ECDHIES key "
 				+ "\n6-Encrypt under Schnorr / ECDHIES key"
 				+ "\n7-Decrypt cryptogram");
-		//Scanner scanner = new Scanner(System.in);
 		String mode = scanner.nextLine();
-
 
 		System.out.println("--Enter digit for input method: \n"
 				+ "1-File Input \n"
 				+ "2-Console Input");
 		String inputMethod = scanner.nextLine();
+		
+		
+		String outputMethod = askOutputMethod();
+		
 
-
-		//modes
 		//1 -  Hash - 
 		if (mode.equals("0")) {
 			printTestVector();
-		} else if (mode.equals("1")) {
+		} else if (mode.equals("1")) { //Hash
 			byte[] data = askForData(inputMethod);
 			byte[] crypt = hashKMAC(data);
-			printByteData(crypt);
-		} else if (mode.equals("2")) {
+			if (outputMethod.equals("1")) {
+				String folderPath = askOutputFilesLocation();
+				outputFile(folderPath + "\\Hash.txt", crypt);
+			} else {
+				printByteData(crypt);
+			}
+		} else if (mode.equals("2")) { //MAC
 			byte[] key = askForKey(inputMethod);
 			byte[] data = askForData(inputMethod);
 			byte[] crypt = macKMAC(key, data);
-			printByteData(crypt);
+			if (outputMethod.equals("1")) {
+				String folderPath = askOutputFilesLocation();
+				outputFile(folderPath + "\\MAC.txt", crypt);
+			} else {
+				printByteData(crypt);
+			}
 		} else if (mode.equals("3")) {
 			byte[] key = askForKey(inputMethod);
 			byte[] data = askForData(inputMethod);
-			symmetricEncryption(key, data);
+			symmetricEncryption(key, data, outputMethod);
+		} else if (mode.equals("4")) {
+			byte[] z = askForKey(inputMethod);
+			byte[] c = askForData(inputMethod);
+			byte[] t = askForMAC(inputMethod);
+			
 		}
 		
 		
@@ -82,7 +97,7 @@ public class Main {
 		return sponge.getData();
 	}
 
-	private static void symmetricEncryption(byte[] key, byte[] data) {
+	private static void symmetricEncryption(byte[] key, byte[] data, String outputChoice) {
 		//getting a random 512 bit value
 		SecureRandom secureRandom = new SecureRandom();
 		byte[] initializationValue = new byte[64];
@@ -106,7 +121,6 @@ public class Main {
 		//MAC
 		byte[] t = (new KMACXOF256(ka, data, 512, "SKA")).getData();
 
-		String outputChoice = askOutputMethod();
 		if (outputChoice.equals("1")) {
 			String folderPath = askOutputFilesLocation();
 			outputFile(folderPath + "\\z.txt", z);
@@ -122,6 +136,10 @@ public class Main {
 		}
 	}
 
+	private static byte[] symmetricDecrption(byte[] z, byte[] c, byte[] t) {
+		
+		return null;
+	}
 
 	/* ------------------------------------------
 	 * 			Input Assistance Methods
@@ -149,6 +167,17 @@ public class Main {
 		}
 	}
 
+	private static byte[] askForMAC(String inputChoice) {
+		System.out.println();
+		if (inputChoice.equals("1")) {
+			System.out.print("Enter MAC filepath: ");
+			return getFileInput();
+		} else {
+			System.out.print("Enter mac: ");
+			return getConsoleInput();
+		}
+	}
+	
 	private static byte[] getConsoleInput() {
 		//Scanner scanner = new Scanner(System.in);
 		String stringInput = scanner.nextLine();
