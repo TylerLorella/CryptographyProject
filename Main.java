@@ -89,7 +89,6 @@ public class Main {
 				x[index] = stuff[index];
 			}
 			boolean isEven = stuff[stuff.length - 1] == 1;
-			System.out.println("Last bit : " + stuff[stuff.length-1]);
 			
 			Point pointV = new Point(new BigInteger(x), isEven);
 			
@@ -257,14 +256,24 @@ public class Main {
 
 		SecureRandom secureRandom = new SecureRandom();
 		byte[] randomVals = new byte[64];
+	
+		boolean isValid = false;
+		BigInteger newX = BigInteger.ZERO;
+		BigInteger newY = BigInteger.ZERO;
+		BigInteger k = BigInteger.ZERO;
+		while (!isValid) {
+			
 		secureRandom.nextBytes(randomVals);
-
-		BigInteger k = new BigInteger(randomVals);
+		k = new BigInteger(randomVals);
 		k = k.multiply(BigInteger.valueOf(4));
-
-		BigInteger newX =  k.multiply(V.getX());
-		BigInteger newY = k.multiply(V.getY());
-
+		newX =  k.multiply(V.getX());
+		newY = k.multiply(V.getY());
+		
+		Point test = new Point(newX, newY.mod(BigInteger.valueOf(2)));
+		if (!test.getY().equals(BigInteger.ONE)) {
+			isValid = true;
+		}
+		}
 		Point W = new Point(newX, newY);
 
 		BigInteger zX = k.multiply(Point.G.getX());
@@ -273,6 +282,8 @@ public class Main {
 		Point Z = new Point(zX, zY);
 
 		byte[] keka = (new KMACXOF256(W.getX().toByteArray(), ("").getBytes(), 1024, "P")).getData(); 
+		System.out.println("ENCRYPTION: KEKA");
+		Point.readByteArray(keka);
 		byte[] ke = new byte[keka.length/2];
 		byte[] ka = new byte[keka.length/2];
 		for (int index = 0; index < keka.length/2; index++) {
@@ -282,7 +293,7 @@ public class Main {
 			ka[index - keka.length/2] = keka[index]; 
 		}
 
-		byte[] mask = new KMACXOF256(ke, "".getBytes(), m.length, "PKE").getData();
+		byte[] mask = new KMACXOF256(ke, "".getBytes(), m.length * 8, "PKE").getData();
 		byte[] c = xorBytes(m, mask);
 		byte[] t = new KMACXOF256(ka, m, 512, "PKA").getData();
 
@@ -312,6 +323,7 @@ public class Main {
 		Point W = new Point(wX, wY);
 
 		byte[] keka = (new KMACXOF256(W.getX().toByteArray(), ("").getBytes(), 1024, "P")).getData(); 
+		Point.readByteArray(keka);
 		byte[] ke = new byte[keka.length/2];
 		byte[] ka = new byte[keka.length/2];
 		for (int index = 0; index < keka.length/2; index++) {
@@ -321,7 +333,7 @@ public class Main {
 			ka[index - keka.length/2] = keka[index]; 
 		}
 
-		byte[] mask = new KMACXOF256(ke, "".getBytes(), c.length, "PKE").getData();
+		byte[] mask = new KMACXOF256(ke, "".getBytes(), c.length * 8, "PKE").getData();
 		byte[] m = xorBytes(c, mask);
 		byte[] t2 = new KMACXOF256(ka, m, 512, "PKA").getData();
 
