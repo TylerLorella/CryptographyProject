@@ -58,11 +58,18 @@ public class Main {
 			byte[] data = askForData(inputMethod);
 			symmetricEncryption(key, data, outputMethod);
 		} else if (mode.equals("4")) {
-			byte[] z = askForKey(inputMethod);
+			byte[] z = askForIV(inputMethod);
+			byte[] key = askForKey(inputMethod);
 			byte[] c = askForData(inputMethod);
 			byte[] t = askForMAC(inputMethod);
-			
-		}
+			byte[] message = symmetricDecryption(z, key, c, t, outputMethod);
+			if (outputMethod.equals("1")) {
+				String folderPath = askOutputFilesLocation();
+				outputFile(folderPath + "\\DecryptedMessage.txt", message);
+			} else {
+				printByteData(message);
+			}
+		} 
 		
 		
 		scanner.close();
@@ -103,9 +110,8 @@ public class Main {
 		byte[] initializationValue = new byte[64];
 		secureRandom.nextBytes(initializationValue);
 
-		byte[] z = concatinateBytes(initializationValue, key); //key
-
-		byte[] keka = (new KMACXOF256(z, ("").getBytes(), 1024, "S")).getData(); 
+		byte[] keka = (new KMACXOF256(concatinateBytes(initializationValue, key)
+										, ("").getBytes(), 1024, "S")).getData(); 
 		byte[] ke = new byte[keka.length/2];
 		byte[] ka = new byte[keka.length/2];
 		for (int index = 0; index < keka.length/2; index++) {
@@ -115,20 +121,19 @@ public class Main {
 			ka[index - keka.length/2] = keka[index]; 
 		}
 
-		//encrpted message
+		//encrypted message
 		byte[] c = xorBytes((new KMACXOF256(ke, ("").getBytes(), data.length * 8, "SKE")).getData(), data);
-
 		//MAC
 		byte[] t = (new KMACXOF256(ka, data, 512, "SKA")).getData();
 
 		if (outputChoice.equals("1")) {
 			String folderPath = askOutputFilesLocation();
-			outputFile(folderPath + "\\z.txt", z);
+			outputFile(folderPath + "\\z.txt", initializationValue);
 			outputFile(folderPath + "\\c.txt", c);
 			outputFile(folderPath + "\\t.txt", t);
 		} else { 
 			System.out.print("\nz: ");
-			printByteData(z);
+			printByteData(initializationValue);
 			System.out.print("\nc: ");
 			printByteData(c);
 			System.out.print("\nt: ");
@@ -136,15 +141,44 @@ public class Main {
 		}
 	}
 
-	private static byte[] symmetricDecrption(byte[] z, byte[] c, byte[] t) {
+	private static byte[] symmetricDecryption(byte[] iv, byte[] key, byte[] c, byte[] t, String outputMethod) {
+		byte[] keka = (new KMACXOF256(concatinateBytes(iv, key), ("").getBytes(), 1024, "S")).getData(); 
+		byte[] ke = new byte[keka.length/2];
+		byte[] ka = new byte[keka.length/2];
+		for (int index = 0; index < keka.length/2; index++) {
+			ke[index] = keka[index];
+		}
+		for (int index = keka.length/2; index < keka.length; index++) {
+			ka[index - keka.length/2] = keka[index]; 
+		}
 		
-		return null;
+		byte[] m = xorBytes((new KMACXOF256(ke, ("").getBytes(), c.length * 8, "SKE")).getData(), c);
+		byte[] tPrime = (new KMACXOF256(ka, m, 512, "SKA")).getData();
+		
+		if (equalByteArrays(tPrime, t)) {
+			System.out.println("OUTPUT ACCEPTED");
+			return m;
+		} else {
+			System.out.println("OUTPUT UNACCEPTABLE");
+			return null;
+		}
 	}
 
 	/* ------------------------------------------
 	 * 			Input Assistance Methods
 	 * ------------------------------------------*/
 
+	private static byte[] askForIV(String inputChoice) {
+		System.out.println();
+		if (inputChoice.equals("1")) {
+			System.out.print("Enter IV filepath: ");
+			return getFileInput();
+		} else {
+			System.out.print("Enter IV: ");
+			return getConsoleInput();
+		}
+	}
+	
 	private static byte[] askForKey(String inputChoice) {
 		System.out.println();
 		if (inputChoice.equals("1")) {
@@ -246,6 +280,14 @@ public class Main {
 	 * 				Auxiliary Methods
 	 * ------------------------------------------*/
 
+	private static boolean equalByteArrays(byte[] data1, byte[] data2) {
+		if (data1.length != data2.length) return false;
+		for (int index = 0; index < data1.length; index++) {
+			if (data1[index] != data2[index]) return false;
+		}
+		return true;
+	}
+	
 	private static byte[] xorBytes(byte[] data1, byte[] data2) {
 		if (data1.length != data2.length) System.out.println(data1.length + " != " + data2.length);
 		byte[] result = new byte[data1.length];
@@ -283,6 +325,7 @@ public class Main {
 		return toReturn;
 	}
 
+	
 	private static String byte2String(byte toConvert) {
 		String toReturn = "";
 
