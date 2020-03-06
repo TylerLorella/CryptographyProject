@@ -89,6 +89,7 @@ public class Main {
 				x[index] = stuff[index];
 			}
 			boolean isEven = stuff[stuff.length - 1] == 1;
+			System.out.println("Last bit : " + stuff[stuff.length-1]);
 			
 			Point pointV = new Point(new BigInteger(x), isEven);
 			
@@ -227,13 +228,13 @@ public class Main {
 
 		byte[] m = xorBytes((new KMACXOF256(ke, ("").getBytes(), c.length * 8, "SKE")).getData(), c);
 		byte[] tPrime = (new KMACXOF256(ka, m, 512, "SKA")).getData();
-
+		
 		if (equalByteArrays(tPrime, t)) {
 			System.out.println("OUTPUT ACCEPTED");
 			return m;
 		} else {
 			System.out.println("OUTPUT UNACCEPTABLE");
-			return null;
+			return m;
 		}
 	}
 
@@ -475,6 +476,7 @@ public class Main {
 			byte section = 0b0;
 			while (section != -1) {
 				section = (byte) fileInput.read();
+				if (section == -1) break;
 				arrayData.add(section);
 			}
 			fileData = convertToArray(arrayData);
