@@ -1,3 +1,10 @@
+/*
+ * Cryptography Pratical Project
+ * Point.java by Maxfield England and Tyler Lorella
+ * 
+ * Implementation of E-521 elliptic curve for asymmetric cryptography. Contains constructors
+ * and operations necessary to facilitate elliptic curve arithmetic as used in Main.java.
+ */
 import java.math.BigInteger;
 
 //BigInteger Point class; particularly to facilitate points on the Edwards curve E521
@@ -5,11 +12,12 @@ public class Point {
 	
 	
 	//2^521 - 1 : a mersenne prime, necessary for the curve.
-	private BigInteger mersenne = new BigInteger("2").pow(521).add(new BigInteger("-1"));
+	private static BigInteger mersenne = new BigInteger("2").pow(521).add(new BigInteger("-1"));
 
 	//Edwards curve constant
-	private BigInteger d = new BigInteger("-376014");
-
+	private static BigInteger d = new BigInteger("-376014");
+	
+	// 1/4 of the total values on E-521; a value utilized for digital signatures.
 	public static BigInteger r = BigInteger.valueOf(2).pow(519).subtract(new BigInteger("337554763258501705789107630418782636071904961214051226618635150085779108655765"));
 	
 	//Instance fields of the x and y coordinate values.
@@ -38,10 +46,18 @@ public class Point {
 		this.y = BigInteger.ONE;
 	}
 	
+	/**
+	 * Returns the x value of the point.
+	 * @return The point's x value.
+	 */
 	public BigInteger getX() {
 		return x;
 	}
 
+	/**
+	 * Returns the y value of the point.
+	 * @return The point's y value.
+	 */
 	public BigInteger getY() {
 		return y;
 	}
@@ -62,10 +78,10 @@ public class Point {
 		
 		BigInteger root = sqrt(int3, mersenne, ybit);
 		
-		if (!root.equals(null)) {
+		if (root != null) {
 			this.y = root;
 		}
-		//if not acceptable, use the default? TODO
+		//if not acceptable, use the default? 
 		else {
 			this.y = BigInteger.ONE;
 		}
@@ -79,7 +95,8 @@ public class Point {
 	 * @param p2 The second point added.
 	 * @return
 	 */
-	Point pointSum(Point p1, Point p2) {
+	static Point pointSum(Point p1, Point p2) {
+		
 		
 		BigInteger x1 = p1.x; 
 		BigInteger x2 = p2.x;
@@ -94,7 +111,10 @@ public class Point {
 		BigInteger newyNum = ((y1.multiply(y2)).subtract(x1.multiply(x2)));
 		BigInteger newy = newyNum.multiply((BigInteger.ONE.subtract(denomdx).modInverse(mersenne)));
 		
-		return new Point(newx, newy);	
+		newx = newx.mod(mersenne);
+		newy = newy.mod(mersenne);
+		
+		return new Point(newx, newy);
 	}
 	
 	/**
@@ -105,30 +125,78 @@ public class Point {
 		
 		BigInteger negX = x.modInverse(mersenne);
 		return new Point(negX, y);
-		
 	}
 	
+	/**
+	 * Returns the 'scalar multiple' of a point (a point added to itself s times) using
+	 * double-and-add
+	 * @param p The point to be multiplied.
+	 * @param s The 'scalar' multiple of the point.
+	 * @return A point on the curve that is effectively s * p.
+	 */
+	public static Point multiply(Point p, BigInteger s) {
+		
+		Point product = p;
+		
+		
+		String bitString = s.toString(2);
+		Point n = p;
+		for (int i = 0; i < bitString.length(); i++) {
+			if (bitString.charAt(i) == '1'){
+				product = Point.pointSum(product, n);
+			}
+			n = Point.pointSum(n, n);			
+		}
+		return product;
+		
+	}
 	
 	/**
 	 * Converts the current point object into a byte[] representation where the last byte is a 1
 	 *  if the y value is odd, other y is even.
-	 * @return a byte[]
+	 * @return a byte[] of length 67 (66-byte xval + 1-byte y)
 	 */
 	public byte[] toByte() {
+		
 		byte[] xBytes = x.toByteArray();
-		byte ybit = 0b1;
+		int numZeroes = 66 - xBytes.length;
+		byte ybit = 1;
 		if (y.mod(BigInteger.valueOf(2)).equals(BigInteger.ZERO)) {
-			ybit = 0b0;
+			ybit = 0;
 		}
-		byte[] toReturn = new byte[xBytes.length + 1];
-		for (int index = 0; index < xBytes.length; index++) {
-			toReturn[index] = xBytes[index];
+		byte[] toReturn = new byte[67];
+
+		int index = 0;
+		for (; index < numZeroes; index++) {
+			toReturn[index] = 0;
 		}
-		toReturn[xBytes.length] = ybit;
+
+		for (; index < 66; index++) {
+			toReturn[index] = xBytes[index - numZeroes];
+		}
+		toReturn[66] = ybit;
 		return toReturn;
 	}
 	
-	@Override
+	/**
+	 * Reads a byte array to console for legibility of its contents; useful for point data but 
+	 * can be accessed elsewhere as a general utility method. 
+	 * @param arr The byte array to be printed to the console.
+	 */
+	public static void readByteArray(byte[] arr) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("[");
+		for (int i = 0; i < arr.length - 1; i++) sb.append(arr[i] + ", ");
+		sb.append(arr[arr.length-1]);
+		sb.append("]");
+		System.out.println(sb.toString());
+		
+	}
+
+	/**
+	 * Compares this point to another object for point equivalence.
+	 */
+	@Override	
 	public boolean equals(Object other) {
 		
 		if (other.getClass() != this.getClass()) return false;
