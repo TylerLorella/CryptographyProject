@@ -5,6 +5,10 @@
  * Based on the C-implementation of SHA-3 by Markku-Juhani O. Saarinen 
  * https://github.com/mjosaarinen/tiny_sha3
  * 
+ * This file contains a 'working' implementation of KMACXOF256: given an instance of KMACXOF256, a call
+ *  to cSHAKE256 will be completed, and ultimately, the Keccak construct will be used to output
+ *  a byte array of user-specified size of hash data.
+ * 
  */
 
 import java.math.BigInteger;
@@ -16,9 +20,7 @@ public class KMACXOF256 {
 	//Round constants (BigInteger) 
 	private BigInteger[] RC = new BigInteger[24];
 
-	
-	
-	//String representations of the constants; to populate RC on radix 16
+	//String representations of the constants; to populate 'RC' round contant array on radix 16
 	private String[] toRC = {"0000000000000001", "0000000000008082", "800000000000808A", "8000000080008000",
 			"000000000000808B", "0000000080000001", "8000000080008081", "8000000000008009", "000000000000008A",
 			"0000000000000088", "0000000080008009", "000000008000000A", "000000008000808B","800000000000008B", "8000000000008089",
@@ -42,16 +44,18 @@ public class KMACXOF256 {
 
 	private byte[] inData;
 
+	//Used for theta function
 	BigInteger[] bc = new BigInteger[5];
 	BigInteger t;
 
 	BigInteger[] myState = new BigInteger[25]; //each element is a "lane" of the internal state?
 
-	//State instance fields
-	//Length of the return we're looking for
-	private int mdlen; //message digest length?
+	//State instance fields:
+	
+	//Length of the return we're looking for; message digest length
+	private int mdlen; 
 
-	//
+	//TODO: What... is rsiz, and why is it 72?
 	private int rsiz = 72;
 
 	//Keeps track of which bytes have already been operated on in between update steps
@@ -59,478 +63,498 @@ public class KMACXOF256 {
 
 	/**
 	 * Returns KMACXOF256 of given key bitstring (byte array), data, length of desired output,
-	 * and diversification string
+	 * and diversification string.
 	 * 
-	 * @param K
-	 * @param X
-	 * @param L
-	 * @param S
+	 * @param K The "key" data; data we put in specifically to be the key
+	 * @param X Data to be encrypted
+	 * @param L Length of required output: given in bits, but converted internally to bytes
+	 * @param S 'Diversification String'; gives a unique output for different strings.
 	 */
 	KMACXOF256(byte[] K, byte[] X, int L, String S){
 
+		//User will give a set amount of bits; since we work with bytes, translate the bits to bytes
 		mdlen = L / 8;
-		
-		//Initialize round constants
+
+		//Initialize round constant array
 		for (int i = 0; i < 24; i++) {
 			RC[i] = new BigInteger(toRC[i], 16);
 		}
 
-			byte[] x1 = bytepad(encode_string(K), 168);
-			byte[] x3 = right_encode(BigInteger.ZERO);
+		//Prepare specified x input
+		byte[] x1 = bytepad(encode_string(K), 168);
+		byte[] x3 = right_encode(BigInteger.ZERO);
 
-			byte[] newX = new byte[x1.length + X.length + x3.length];
+		byte[] newX = new byte[x1.length + X.length + x3.length];
 
-			int index = 0;
-			for (byte b : x1) {
-				newX[index] = b;
-				index++;
-			}
-			for (byte b: X) {
-				newX[index] = b;
-				index++;
-			}
-			for (byte b: x3) {
-				newX[index] = b;
-				index++;
-			}
+		int index = 0;
+		for (byte b : x1) {
+			newX[index] = b;
+			index++;
+		}
+		for (byte b: X) {
+			newX[index] = b;
+			index++;
+		}
+		for (byte b: x3) {
+			newX[index] = b;
+			index++;
+		}
 		//TODO: Integrate
 		cSHAKE256(newX, L, "KMAC", S);
 	}
-	
-		//TODO: Considering this dumb bitch returns and we don't ever even care about that because it's really just an extension of the constructor,
-		//Maybe make it less stupid, you dumb whore
-		/**
-		 * Returns CSHAKE (in terms of Keccak and SHAKE256) of the given goodies
-		 * 
-		 * @param X
-		 * @param L
-		 * @param N
-		 * @param S
-		 * @return
+
+	//TODO: Considering this dumb bitch returns and we don't ever even care about that because it's really just an extension of the constructor,
+	//Maybe make it less stupid, you dumb whore
+	/**
+	 * Returns CSHAKE (in terms of Keccak and SHAKE256) of the given goodies
+	 * 
+	 * @param X
+	 * @param L
+	 * @param N
+	 * @param S
+	 * @return
+	 */
+	void cSHAKE256(byte[] X, int L, String N, String S){
+
+		char[] flex = N.toCharArray();
+		byte[] x1 = new byte[flex.length];
+		for (int i = 0; i < flex.length; i++){
+			x1[i] = (byte)flex[i];
+		}
+		char[] flex2 = S.toCharArray();
+		byte[] x2 = new byte[flex2.length];
+		for (int i = 0; i < flex2.length; i++) {
+			x2[i] = (byte)flex2[i];
+		}
+
+		byte[] n = encode_string(x1);
+		byte[] s = encode_string(x2);
+
+		byte[] newX = new byte[n.length + s.length];
+		for (int index = 0; index < n.length; index++) {
+			newX[index] = n[index];
+		}
+
+		for (int index = 0; index < s.length; index++) {
+			newX[index] = s[index];
+		}
+
+		byte[] retStart = bytepad(newX, 136);
+
+		byte[] ret = new byte[retStart.length + X.length + 2];
+
+		for (int index = 0; index < retStart.length; index++) {
+			ret[index] = retStart[index];
+		}
+		for (int index = 0; index < X.length; index++) {
+			ret[index] = X[index];
+		}
+		ret[ret.length-2] = 0;
+		ret[ret.length-1] = 0;
+
+		inData = ret;
+	}
+
+
+	/**
+	 * Provides a right-encoded byte array based on the given integer.
+	 * @param x The integer to be encoded
+	 * @return Returns a byte array based on the given integer, with right-padding of the length.
+	 */
+	byte[] right_encode(BigInteger x) {
+
+		/*Possibly trivial solution; based on the specifications, 
+		 * as the encodes' primary focus is to encode the integer as a byte array, a feature that BigInteger natively 
+		 * has.
 		 */
-		void cSHAKE256(byte[] X, int L, String N, String S){
+		byte[] retBytes = x.toByteArray();
+		byte[] addBytes = BigInteger.valueOf(retBytes.length).toByteArray();
+		byte[] finalBytes = new byte[retBytes.length + addBytes.length];
+		for (int i = 0; i < retBytes.length; i++) {
+			finalBytes[i] = retBytes[i];
+		}
+		for (int i = 0; i < addBytes.length; i++) {
+			finalBytes[retBytes.length + i] = addBytes[i];
+		}
+		return finalBytes;
 
-			char[] flex = N.toCharArray();
-			byte[] x1 = new byte[flex.length];
-			for (int i = 0; i < flex.length; i++){
-				x1[i] = (byte)flex[i];
-			}
-			char[] flex2 = S.toCharArray();
-			byte[] x2 = new byte[flex2.length];
-			for (int i = 0; i < flex2.length; i++) {
-				x2[i] = (byte)flex2[i];
-			}
+		//Leaving as legacy in case the above solution is not accurate
+		//		ArrayList<Byte> byteArray = new ArrayList<Byte>();
+		//
+		//		int n = 0;
+		//		while (BigInteger.TWO.pow(8*n).compareTo(x) == -1) n++;
+		//
+		//		for (int i = n; i > 0; i++) {
+		//
+		//			byte[] currBytes = x.subtract(BigInteger.TWO.pow(8*i)).toByteArray();
+		//			for (byte b : currBytes) byteArray.add(b);
+		//		}
+		//		
+		//		byteArray.
 
-			byte[] n = encode_string(x1);
-			byte[] s = encode_string(x2);
+	}
 
-			byte[] newX = new byte[n.length + s.length];
-			for (int index = 0; index < n.length; index++) {
-				newX[index] = n[index];
-			}
+	/**
+	 * Returns the left encoding of the (big) integer value x, preceded by the bytes of the number size.
+	 * @param x the BigInteger to create a byte encoding from
+	 * @return Returns the encoding.
+	 */
+	byte[] left_encode(BigInteger x){
 
-			for (int index = 0; index < s.length; index++) {
-				newX[index] = s[index];
-			}
+		//Only difference between left_encode and right_encode is that left_encode puts the int size padding
+		//at the beginning of the byte array.
 
-			byte[] retStart = bytepad(newX, 136);
+		byte[] retBytes = x.toByteArray();
+		byte[] addBytes = BigInteger.valueOf(retBytes.length).toByteArray();
+		byte[] finalBytes = new byte[retBytes.length + addBytes.length];
 
-			byte[] ret = new byte[retStart.length + X.length + 2];
-
-			for (int index = 0; index < retStart.length; index++) {
-				ret[index] = retStart[index];
-			}
-			for (int index = 0; index < X.length; index++) {
-				ret[index] = X[index];
-			}
-			ret[ret.length-2] = 0;
-			ret[ret.length-1] = 0;
-
-			inData = ret;
+		for (int i = 0; i < addBytes.length; i++) {
+			finalBytes[i] = addBytes[i];
 		}
 
-
-		/**
-		 * Provides a right-encoded byte array based on the given integer.
-		 * @param x The integer to be encoded
-		 * @return Returns a byte array based on the given integer, with right-padding of the length.
-		 */
-		byte[] right_encode(BigInteger x) {
-
-			/*Possibly trivial solution; based on the specifications, 
-			 * as the encodes' primary focus is to encode the integer as a byte array, a feature that BigInteger natively 
-			 * has.
-			 */
-			byte[] retBytes = x.toByteArray();
-			byte[] addBytes = BigInteger.valueOf(retBytes.length).toByteArray();
-			byte[] finalBytes = new byte[retBytes.length + addBytes.length];
-			for (int i = 0; i < retBytes.length; i++) {
-				finalBytes[i] = retBytes[i];
-			}
-			for (int i = 0; i < addBytes.length; i++) {
-				finalBytes[retBytes.length + i] = addBytes[i];
-			}
-			return finalBytes;
-
-			//Leaving as legacy in case the provided solution is not accurate
-			//		ArrayList<Byte> byteArray = new ArrayList<Byte>();
-			//
-			//		int n = 0;
-			//		while (BigInteger.TWO.pow(8*n).compareTo(x) == -1) n++;
-			//
-			//		for (int i = n; i > 0; i++) {
-			//
-			//			byte[] currBytes = x.subtract(BigInteger.TWO.pow(8*i)).toByteArray();
-			//			for (byte b : currBytes) byteArray.add(b);
-			//		}
-			//		
-			//		byteArray.
-
+		for (int i = 0; i < retBytes.length; i++) {
+			finalBytes[addBytes.length + i] = retBytes[i];
 		}
 
-		/**
-		 * Returns the left encoding of the (big) integer value x, preceded by the bytes of the number size.
-		 * @param x the BigInteger to create a byte encoding from
-		 * @return Returns the encoding.
-		 */
-		byte[] left_encode(BigInteger x){
+		return finalBytes;
 
-			//Only difference between left_encode and right_encode is that left_encode puts the int size padding
-			//at the beginning of the byte array.
+	}
 
-			byte[] retBytes = x.toByteArray();
-			byte[] addBytes = BigInteger.valueOf(retBytes.length).toByteArray();
-			byte[] finalBytes = new byte[retBytes.length + addBytes.length];
+	public byte[] encode_string(byte[] s) {
 
-			for (int i = 0; i < addBytes.length; i++) {
-				finalBytes[i] = addBytes[i];
-			}
+		byte[] first = left_encode(BigInteger.valueOf(s.length));
 
-			for (int i = 0; i < retBytes.length; i++) {
-				finalBytes[addBytes.length + i] = retBytes[i];
-			}
-
-			return finalBytes;
-
+		byte[] ret = new byte[first.length + s.length];
+		for (int i = 0; i < first.length; i++) {
+			ret[i] = first[i];
+		}
+		for (int i = 0; i < s.length; i++) {
+			ret[i+first.length] = s[i];
 		}
 
-		public byte[] encode_string(byte[] s) {
+		return ret;
+	}
 
-			byte[] first = left_encode(BigInteger.valueOf(s.length));
+	//Prepends an encoding of the integer w to the string x, and pads the result
+	//with zeros until it is a byte string whose length in bytes is a multiple
+	//of w
+	//used for encoded strings
+	public byte[] bytepad(byte[] X, int w) {
 
-			byte[] ret = new byte[first.length + s.length];
-			for (int i = 0; i < first.length; i++) {
-				ret[i] = first[i];
-			}
-			for (int i = 0; i < s.length; i++) {
-				ret[i+first.length] = s[i];
-			}
+		byte[] z1 = left_encode(BigInteger.valueOf(w));
 
-			return ret;
+		byte[] z = new byte[z1.length + X.length];
+		for (int i = 0; i < z1.length; i++) {
+			z[i] = z1[i];
+		}
+		for (int i = 0; i < X.length; i++) {
+			z[i+z1.length] = X[i];
 		}
 
-		//Prepends an encoding of the integer w to the string x, and pads the result
-		//with zeros until it is a byte string whose length in bytes is a multiple
-		//of w
-		//used for encoded strings
-		public byte[] bytepad(byte[] X, int w) {
+		int tarLen = z.length;
+		int addZeroes = 0;
+		while ((tarLen + addZeroes) % 8 != 0) {
+			addZeroes++;
+		}
+		while ((tarLen + addZeroes) / 8 % w != 0) {
+			addZeroes += 8;
+		}
 
-			byte[] z1 = left_encode(BigInteger.valueOf(w));
+		byte[] ret = new byte[tarLen + addZeroes];
+		int i;
+		for (i = 0; i < ret.length - z.length; i++) {
+			ret[i+z.length] = 0;
+		}
+		for (int x = 0; x < z.length; x++) {
+			ret[x] = z[x];
+		}
 
-			byte[] z = new byte[z1.length + X.length];
-			for (int i = 0; i < z1.length; i++) {
-				z[i] = z1[i];
-			}
-			for (int i = 0; i < X.length; i++) {
-				z[i+z1.length] = X[i];
+		//		while ((z.length() / 8.0) % w != 0) {
+		//			z = z + "00000000";
+		//		}
+		return z;
+
+	}
+
+	public byte[] getData() {
+
+		byte[] messageDigest = sha3(inData, mdlen);
+		return messageDigest;
+	}
+
+
+	public void keccakf(BigInteger[] state) {
+
+		//Convert state for endianness
+		endian_Convert();
+		
+		//For 24 rounds 
+		for (int r = 0 ; r < 24; r++) {
+
+			//Theta function
+			for (int i = 0; i < 5; i++) {
+					bc[i] = state[i].xor(state[i+5]).xor(state[i+10]).xor(state[i+15]).xor(state[i+20]);
 			}
 
-			int tarLen = z.length;
-			int addZeroes = 0;
-			while ((tarLen + addZeroes) % 8 != 0) {
-				addZeroes++;
-			}
-			while ((tarLen + addZeroes) / 8 % w != 0) {
-				addZeroes += 8;
+			for (int i = 0; i < 5; i++) {
+
+				t = bc[(i+4) % 5].xor(ROTL64(bc[(i+1) % 5], 1)); 
+
+				for (int j = 0; j < 25; j += 5) {
+					state[j + 1] = state[j+1].xor(t);
+				}
+
 			}
 
-			byte[] ret = new byte[tarLen + addZeroes];
-			int i;
-			for (i = 0; i < ret.length - z.length; i++) {
-				ret[i+z.length] = 0;
-			}
-			for (int x = 0; x < z.length; x++) {
-				ret[x] = z[x];
+			//Rho & Pi
+			t = state[1];
+			for (int i = 0; i < 24; i++) {
+				int j = keccakf_piln[i];
+				bc[0] = state[j];
+				state[j] = ROTL64(t, keccakf_rotc[i]);
+				t = bc[0];
 			}
 
-			//		while ((z.length() / 8.0) % w != 0) {
-			//			z = z + "00000000";
-			//		}
-			return z;
+			//Chi
+			for (int j = 0; j < 25; j+=5) {
+				for (int i = 0; i < 5; i++) bc[i] = state[j+i];
+				for (int i = 0; i < 5; i++) 
+					state[j+i] = state[j+1].xor(bc[(i+1)% 5].not()).and(bc[(i+2)%5]);
+			}
+
+			//Iota
+			state[0] = state[0].xor(RC[r]);
 
 		}
 		
-		public byte[] getData() {
-		
-			byte[] messageDigest = sha3(inData, mdlen);
-			return messageDigest;
-		}
+		//Return state to big endian
+		endian_Convert();
+	}
 
-		//return? where is state changed
-		public void keccakf(BigInteger[] state) {
+	void sha3_init(int mdlen) {
 
-			//For 24 rounds 
-			for (int r = 0 ; r < 24; r++) {
-
-				//Theta function
-				for (int i = 0; i < 5; i++) { //TODO: cleanup
-					try {
-						bc[i] = state[i].xor(state[i+5]).xor(state[i+10]).xor(state[i+15]).xor(state[i+20]);
-					} catch (Exception e) {
-						System.out.println("state i: " + state[i] + ", i = " + i);
-						System.out.println("state i+5: " + state[i+5] + ", i = " + i);
-						System.out.println("state i+10: " + state[i+10] + ", i = " + i);
-						System.out.println("state i+15: " + state[i+15] + ", i = " + i);
-						System.out.println("state i+20: " + state[i+20] + ", i = " + i + "\n");
-					}
-				}
-
-				for (int i = 0; i < 5; i++) {
-
-					t = bc[(i+4) % 5].xor(ROTL64(bc[(i+1) % 5], 1)); 
-
-					for (int j = 0; j < 25; j += 5) {
-						state[j + 1] = state[j+1].xor(t);
-					}
-
-				}
-
-				//Rho Pi
-				t = state[1];
-				for (int i = 0; i < 24; i++) {
-					int j = keccakf_piln[i];
-					bc[0] = state[j];
-					state[j] = ROTL64(t, keccakf_rotc[i]);
-					t = bc[0];
-				}
-
-				//Chi
-				for (int j = 0; j < 25; j+=5) {
-					for (int i = 0; i < 5; i++) bc[i] = state[j+i];
-					for (int i = 0; i < 5; i++) 
-						state[j+i] = state[j+1].xor(bc[(i+1)% 5].not()).and(bc[(i+2)%5]);
-				}
-
-				//Iota
-				state[0] = state[0].xor(RC[r]);
-
-			}
-		}
-
-		void sha3_init(int mdlen) {
-
-			for (int i = 0; i < 25; i++)
-				myState[i] = BigInteger.ZERO;
+		for (int i = 0; i < 25; i++)
+			myState[i] = BigInteger.ZERO;
 
 		//	this.mdlen = mdlen;
 		//	rsiz = 200 - 2 * mdlen;
-			pt = 0;
+		pt = 0;
+	}
+
+
+	//Takes in some data that can be byte-indexed, and xors the data against the current state, 
+	void sha3_update(byte[] data) {
+
+		byte[] byteState = stateAsBytes(myState);
+
+		//what is the pt for?
+		int j = pt;
+		for (int i = 0; i < data.length; i++) {
+
+			//TODO: Byte-index an array of BigIntegers? 
+			byteState[j++] ^= data[i];
+
+			if (j >= rsiz) {
+				myState = stateBigInts(byteState); //TODO: this introduces nulls:: fixed?
+				keccakf(myState);
+				j = 0;
+			}
 		}
 
+		myState = stateBigInts(byteState);
+		pt = j;
 
-		//Takes in some data that can be byte-indexed, and xors the data against the current state, 
-		void sha3_update(byte[] data) {
+	}
 
-			byte[] byteState = stateAsBytes(myState);
+	/**
+	 * Converts the state array of BigIntegers to an array of bytes
+	 * @param theState The state represented as an array of BigIntegers.
+	 * 
+	 * @return An array of bytes representing the state.
+	 * 
+	 */
+	static byte[] stateAsBytes(BigInteger[] theState) {
+		//is 200 the size of the sponge c or r?
+		byte[] byteState = new byte[200];
 
-			//what is the pt for?
-			int j = pt;
-			for (int i = 0; i < data.length; i++) {
+		//Since there are 24 BigInts in the state
+		for(int i = 0; i < 24; i++) {
 
-				//TODO: Byte-index an array of BigIntegers? 
-				byteState[j++] ^= data[i];
+			//Can't guarantee the BigInt is 8 bytes of data; check how many bytes of data BigInt is and then prepending padding to 8 bytes
+			byte[] currBytes = new byte[8];
+			byte[] bigIntBytes = theState[i].toByteArray();
 
-				if (j >= rsiz) {
-					myState = stateBigInts(byteState); //TODO: this introduces nulls:: fixed?
-					keccakf(myState);
-					j = 0;
+			if (bigIntBytes.length < 8) {
+				//adding padding
+				int zeroPadCount = 8 - bigIntBytes.length;
+				for (int index = 0; index < zeroPadCount; index++) {
+					currBytes[index] = 0;
 				}
+				//adding message
+				int bigIntBytesIndex = 0;
+				for (int index = zeroPadCount; index < 8; index++) {
+					currBytes[index] = bigIntBytes[bigIntBytesIndex++];
+				}
+			} else {
+				currBytes = bigIntBytes;
 			}
 
-			myState = stateBigInts(byteState);
-			pt = j;
-
-		}
-
-		/**
-		 * Converts the state array of BigIntegers to an array of bytes
-		 * @param theState The state represented as an array of BigIntegers.
-		 * 
-		 * @return An array of bytes representing the state.
-		 * 
-		 */
-		static byte[] stateAsBytes(BigInteger[] theState) {
-			//is 200 the size of the sponge c or r?
-			byte[] byteState = new byte[200];
-
-			//Since there are 24 BigInts in the state
-			for(int i = 0; i < 24; i++) {
-
-				//Can't guarantee the BigInt is 8 bytes of data; check how many bytes of data BigInt is and then prepending padding to 8 bytes
-				byte[] currBytes = new byte[8];
-				byte[] bigIntBytes = theState[i].toByteArray();
-
-				if (bigIntBytes.length < 8) {
-					//adding padding
-					int zeroPadCount = 8 - bigIntBytes.length;
-					for (int index = 0; index < zeroPadCount; index++) {
-						currBytes[index] = 0;
-					}
-					//adding message
-					int bigIntBytesIndex = 0;
-					for (int index = zeroPadCount; index < 8; index++) {
-						currBytes[index] = bigIntBytes[bigIntBytesIndex++];
-					}
-				} else {
-					currBytes = bigIntBytes;
-				}
-
-				//Since there are 8 bytes per BigInteger
-				for (int j = 0; j < 8; j++) {
-					byteState[8*i + j] = currBytes[j];
-				}
+			//Since there are 8 bytes per BigInteger
+			for (int j = 0; j < 8; j++) {
+				byteState[8*i + j] = currBytes[j];
 			}
-
-			return byteState;
 		}
 
-		/**
-		 * Converts the state array of bytes to an array of BigIntegers.
-		 * 
-		 * @param theState The state represented as an array of bytes.
-		 * @return A Biginteger array representation of the state.
-		 */
-		static BigInteger[] stateBigInts(byte[] theState) {
+		return byteState;
+	}
 
-			BigInteger[] intState = new BigInteger[25];
+	/**
+	 * Converts the state array of bytes to an array of BigIntegers.
+	 * 
+	 * @param theState The state represented as an array of bytes.
+	 * @return A Biginteger array representation of the state.
+	 */
+	static BigInteger[] stateBigInts(byte[] theState) {
 
-			for (int i = 0; i < 200; i+=8) {
-				byte[] currBytes = new byte[8];
-				for (int j = 0; j < 8; j++) {
-					currBytes[j] = theState[i+j];
-				}
-				//intState[i/25] = new BigInteger(currBytes); //???
-				intState[i/8] = new BigInteger(currBytes);
+		BigInteger[] intState = new BigInteger[25];
+
+		for (int i = 0; i < 200; i+=8) {
+			byte[] currBytes = new byte[8];
+			for (int j = 0; j < 8; j++) {
+				currBytes[j] = theState[i+j];
 			}
-
-			return intState;
+			//intState[i/25] = new BigInteger(currBytes); //???
+			intState[i/8] = new BigInteger(currBytes);
 		}
 
-		/**
-		 * Does some shuffles, returns a digest known as md
-		 * @return
-		 */
-		byte[] sha3_final() {
+		return intState;
+	}
 
-			byte[] md = new byte[mdlen];
-			int curr = 0;
-			
-			byte[] stateBytes = stateAsBytes(myState);
+	/**
+	 * Does some shuffles, returns a digest known as md
+	 * @return
+	 */
+	byte[] sha3_final() {
 
-			stateBytes[pt] ^= 0x06;
-			stateBytes[rsiz - 1] ^= 0x80;
-			myState = stateBigInts(stateBytes);
-			keccakf(myState);
+		byte[] md = new byte[mdlen];
+		int curr = 0;
 
-			stateBytes = stateAsBytes(myState);
+		byte[] stateBytes = stateAsBytes(myState);
 
-			for (int x = 0; x < (mdlen / rsiz); x++) {
+		stateBytes[pt] ^= 0x06;
+		stateBytes[rsiz - 1] ^= 0x80;
+		myState = stateBigInts(stateBytes);
+		keccakf(myState);
+
+		stateBytes = stateAsBytes(myState);
+
+		for (int x = 0; x < (mdlen / rsiz); x++) {
 			for (int i = 0; i < rsiz; i++) {
 				md[curr + i] = stateBytes[i];
-				}
+			}
 			curr += rsiz;
 			keccakf(myState);
 			stateBytes = stateAsBytes(myState);
+		}
+		for (int i = 0; i < mdlen % rsiz; i++) {
+			md[curr+i] = stateBytes[i];
+		}
+
+		return md;
+	}
+
+	//TODO: For init, update and final methods, do we rely on a return?
+	//Or is this merely an artifact of C? Should they be void?
+
+	/**
+	 * Returns a hash from given data 
+	 * @param 
+	 */
+	//Does this need a new, unique context...? Or can we hold onto our current one?
+	//Keccak 
+	byte[] sha3(byte[] in, int mdlen) {
+
+		sha3_init(mdlen);
+		sha3_update(in);
+		return sha3_final();
+	}
+
+	void shake_xof() {
+
+		byte[] byteState = stateAsBytes(myState);
+		byteState[pt] ^= 0x04;
+		byteState[rsiz-1] ^= 0x80;
+		myState = stateBigInts(byteState);
+		keccakf(myState);
+		pt = 0;
+
+	}
+
+	void shake_out(byte[] out) {
+
+
+		int j = pt;
+		for (int i = 0; i < out.length; i++) {
+			if (j >= rsiz) {
+				keccakf(myState);
+				j = 0;
 			}
-			for (int i = 0; i < mdlen % rsiz; i++) {
-				md[curr+i] = stateBytes[i];
-			}
-
-			return md;
+			byte[] stateBytes = stateAsBytes(myState);
+			out[i] = stateBytes[j++];
 		}
+		pt = j;
+	}
 
-		//TODO: For init, update and final methods, do we rely on a return?
-		//Or is this merely an artifact of C? Should they be void?
-
-		/**
-		 * Returns a hash from given data 
-		 * @param 
-		 */
-		//Does this need a new, unique context...? Or can we hold onto our current one?
-		//Keccak 
-		byte[] sha3(byte[] in, int mdlen) {
-
-			sha3_init(mdlen);
-			sha3_update(in);
-			return sha3_final();
-		}
-
-		void shake_xof() {
-
-			byte[] byteState = stateAsBytes(myState);
-			byteState[pt] ^= 0x04;
-			byteState[rsiz-1] ^= 0x80;
-			myState = stateBigInts(byteState);
-			keccakf(myState);
-			pt = 0;
-
-		}
-
-		void shake_out(byte[] out) {
-
-
-			int j = pt;
-			for (int i = 0; i < out.length; i++) {
-				if (j >= rsiz) {
-					keccakf(myState);
-					j = 0;
-				}
-				byte[] stateBytes = stateAsBytes(myState);
-				out[i] = stateBytes[j++];
-			}
-			pt = j;
-		}
-
-		/*k = data, 
-		 * KMACXOF256(K, X, L, S):
+	/*k = data, 
+	 * KMACXOF256(K, X, L, S):
 Validity Conditions: len(K) <22040 and 0 â‰¤ L and len(S) < 22040
 1. newX = bytepad(encode_string(K), 136) || X || right_encode(0).
 2. T = bytepad(encode_string(â€œKMACâ€�) || encode_string(S), 136).
 3. return KECCAK[512](T || newX || 00, L).
 
 	KMACXOF256(String k, String x, ...
-		 */
+	 */
 
-		public BigInteger ROTL64(BigInteger x, int y) {
-			return x.shiftLeft(y).or(x.shiftRight(64 - y));
-
-		}
-
-
-		public String byte2String(byte toConvert) {
-			String toReturn = "";
-
-			byte byteMask = 0b0000001;
-
-			for (int bitIndex = 0; bitIndex < 8; bitIndex++) {
-				int bit = byteMask & toConvert;
-				if (bit == 0) toReturn = "0" + toReturn;
-				else toReturn = "1" + toReturn;
-				byteMask = (byte) (byteMask * 2);
-			}
-
-			return toReturn;
-		}
-
+	/**
+	 * Keccak transform: 'rotate' with shifts
+	 * @ return transformed BigInteger representing a chunk of the state
+	 */
+	public BigInteger ROTL64(BigInteger x, int y) {
+		return x.shiftLeft(y).or(x.shiftRight(64 - y));
 
 	}
+	
+	//Convert state to little-endian; since Java is inherently big-endian
+	private void endian_Convert() {
+		
+		for (int i = 0; i < 25; i++) {
+		
+			byte[] curr = myState[i].toByteArray();
+			byte[] rev = new byte[curr.length];
+			
+			for (int x = 0; x < curr.length; x++) {
+				rev[x] = curr[curr.length - x - 1];
+			}
+			myState[i] = new BigInteger(rev);
+			
+		}
+		
+	}
+
+	public String byte2String(byte toConvert) {
+		String toReturn = "";
+
+		byte byteMask = 0b0000001;
+
+		for (int bitIndex = 0; bitIndex < 8; bitIndex++) {
+			int bit = byteMask & toConvert;
+			if (bit == 0) toReturn = "0" + toReturn;
+			else toReturn = "1" + toReturn;
+			byteMask = (byte) (byteMask * 2);
+		}
+
+		return toReturn;
+	}
+
+
+}
