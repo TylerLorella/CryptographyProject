@@ -55,7 +55,6 @@ public class KMACXOF256 {
 	//Length of the return we're looking for; message digest length
 	private int mdlen; 
 
-	//TODO: What... is rsiz, and why is it 72?
 	private int rsiz = 72;
 
 	//Keeps track of which bytes have already been operated on in between update steps
@@ -99,20 +98,17 @@ public class KMACXOF256 {
 			newX[index] = b;
 			index++;
 		}
-		//TODO: Integrate
 		cSHAKE256(newX, L, "KMAC", S);
 	}
 
-	//TODO: Considering this dumb bitch returns and we don't ever even care about that because it's really just an extension of the constructor,
-	//Maybe make it less stupid, you dumb whore
 	/**
 	 * Returns CSHAKE (in terms of Keccak and SHAKE256) of the given goodies
 	 * 
-	 * @param X
-	 * @param L
-	 * @param N
-	 * @param S
-	 * @return
+	 * @param X The data for KECCAK to shake up.
+	 * @param L The length of the digest desired to be returned.
+	 * @param N Diversification string to augment output.
+	 * @param S Diversification string to augment output.
+	 * @return 
 	 */
 	void cSHAKE256(byte[] X, int L, String N, String S){
 
@@ -220,6 +216,11 @@ public class KMACXOF256 {
 
 	}
 
+	/**
+	 * Encodes a string with the left-encoding of its length.
+	 * @param s The string (as byte array) to be encoded.
+	 * @return An encoding of the string.
+	 */
 	public byte[] encode_string(byte[] s) {
 
 		byte[] first = left_encode(BigInteger.valueOf(s.length));
@@ -276,6 +277,9 @@ public class KMACXOF256 {
 
 	}
 
+	/**
+	 * @return The hash from KMACXOF256; collecting the final output of length L as desired.
+	 */
 	public byte[] getData() {
 
 		byte[] messageDigest = sha3(inData, mdlen);
@@ -283,6 +287,10 @@ public class KMACXOF256 {
 	}
 
 
+	/**
+	 * Performs the function necessary for Keccak to shuffle and obscure data.
+	 * @param state The Keccak state being shuffled.
+	 */
 	public void keccakf(BigInteger[] state) {
 
 		//Convert state for endianness
@@ -331,6 +339,9 @@ public class KMACXOF256 {
 		endian_Convert();
 	}
 
+	/**
+	 * Set up initial conditions for SHA3 construct.
+	 */
 	void sha3_init(int mdlen) {
 
 		for (int i = 0; i < 25; i++)
@@ -342,7 +353,10 @@ public class KMACXOF256 {
 	}
 
 
-	//Takes in some data that can be byte-indexed, and xors the data against the current state, 
+	/**
+	 * Introduces the data to be absorbed by the sponge.
+	 * @param data The data to be absorbed.
+	 */
 	void sha3_update(byte[] data) {
 
 		byte[] byteState = stateAsBytes(myState);
@@ -351,11 +365,10 @@ public class KMACXOF256 {
 		int j = pt;
 		for (int i = 0; i < data.length; i++) {
 
-			//TODO: Byte-index an array of BigIntegers? 
 			byteState[j++] ^= data[i];
 
 			if (j >= rsiz) {
-				myState = stateBigInts(byteState); //TODO: this introduces nulls:: fixed?
+				myState = stateBigInts(byteState);
 				keccakf(myState);
 				j = 0;
 			}
@@ -371,7 +384,6 @@ public class KMACXOF256 {
 	 * @param theState The state represented as an array of BigIntegers.
 	 * 
 	 * @return An array of bytes representing the state.
-	 * 
 	 */
 	static byte[] stateAsBytes(BigInteger[] theState) {
 		//is 200 the size of the sponge c or r?
@@ -431,8 +443,8 @@ public class KMACXOF256 {
 	}
 
 	/**
-	 * Does some shuffles, returns a digest known as md
-	 * @return
+	 * Shuffles the data, returning a hash of the given length.
+	 * @return a byte array containing the specified-length hash.
 	 */
 	byte[] sha3_final() {
 
@@ -463,9 +475,6 @@ public class KMACXOF256 {
 		return md;
 	}
 
-	//TODO: For init, update and final methods, do we rely on a return?
-	//Or is this merely an artifact of C? Should they be void?
-
 	/**
 	 * Returns a hash from given data 
 	 * @param 
@@ -479,6 +488,7 @@ public class KMACXOF256 {
 		return sha3_final();
 	}
 
+	//??
 	void shake_xof() {
 
 		byte[] byteState = stateAsBytes(myState);
@@ -491,7 +501,6 @@ public class KMACXOF256 {
 	}
 
 	void shake_out(byte[] out) {
-
 
 		int j = pt;
 		for (int i = 0; i < out.length; i++) {
@@ -524,7 +533,9 @@ Validity Conditions: len(K) <22040 and 0 â‰¤ L and len(S) < 22040
 
 	}
 	
-	//Convert state to little-endian; since Java is inherently big-endian
+	/**
+	 * Converts the state between little and big-endian, before and after keccak operations.
+	 */
 	private void endian_Convert() {
 		
 		for (int i = 0; i < 25; i++) {
@@ -541,6 +552,11 @@ Validity Conditions: len(K) <22040 and 0 â‰¤ L and len(S) < 22040
 		
 	}
 
+	/**
+	 * Converts a byte to a corresponding bitstring.
+	 * @param toConvert The byte to be made into a bitstring.
+	 * @return The bitstring corresponding to the given byte.
+	 */
 	public String byte2String(byte toConvert) {
 		String toReturn = "";
 
