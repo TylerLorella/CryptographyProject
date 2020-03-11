@@ -2,15 +2,16 @@
  *	Cryptography Practical Project
  *  Main class by Maxfield England and Tyler Lorella
  * 	
- *  Contains I/O and arithmetic operations for key cryptographic services.
+ *  Contains I/O and arithmetic operations for key cryptographic services. 
  */
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -467,8 +468,6 @@ public class Main {
 		BigInteger k = new BigInteger(new KMACXOF256(s.toByteArray(), m, 512, "N").getData());
 		k.multiply(BigInteger.valueOf(4));
 
-		System.out.println("Multiplying by k?");
-		System.out.println(k);
 		Point U = Point.multiply(Point.G, k);
 		System.out.println("Done");
 		
@@ -530,10 +529,9 @@ public class Main {
 	private static byte[] askForCryptogram(String inputChoice) {
 		System.out.println();
 		if (inputChoice.equals("1")) {
-			System.out.print("Enter cryptogram file name: ");
+			System.out.print("Enter cryptogram filename: ");
 			return getFileInput();
-		}
-		else {
+		} else {
 			System.out.print("Enter cryptogram: ");
 			return getConsoleInput();
 		}
@@ -648,16 +646,20 @@ public class Main {
 		byte[] fileData = {0b0};
 		String filePath = scanner.nextLine();
 		try {
-			ArrayList<Byte> arrayData = new ArrayList<Byte>();
-			FileInputStream fileInput = new FileInputStream(filePath);
-			byte section = 0b0;
-			while (section != -1) {
-				section = (byte) fileInput.read();
-				if (section == -1) break;
-				arrayData.add(section);
-			}
-			fileData = convertToArray(arrayData);
-			fileInput.close();
+//			ArrayList<Byte> arrayData = new ArrayList<Byte>();
+//			FileInputStream fileInput = new FileInputStream(filePath);
+//			byte section = 0b0;
+//			while (section != -1) {
+//				section = (byte) fileInput.read();
+//				if (section == -1) break;
+//				arrayData.add(section);
+//			}
+//			fileData = convertToArray(arrayData);
+//			fileInput.close();
+			
+			fileData = Files.readAllBytes(Paths.get(filePath));
+			
+			
 		} catch (Exception e) {
 			System.out.println("Invalid file input, Exiting Program");
 			System.exit(0);
