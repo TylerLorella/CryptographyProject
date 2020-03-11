@@ -6,12 +6,11 @@
  */
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -188,7 +187,6 @@ public class Main {
 	/**
 	 * Test vector for comparison to expected KMAC output
 	 */
-	//TODO: Should we delete this? Ours still doesn't line up.
 	private static void printTestVector() {
 		System.out.println("--------Test Vector Start-------");
 		byte[] testData = {00, 01, 00, 11};
@@ -643,29 +641,30 @@ public class Main {
 	private static byte[] getFileInput() {
 		//System.out.print("Enter file path: ");
 		//Scanner scanner = new Scanner(System.in);
-		byte[] fileData = {0b0};
+		ArrayList<Byte> arrayData = new ArrayList<Byte>();
 		String filePath = scanner.nextLine();
 		try {
-//			ArrayList<Byte> arrayData = new ArrayList<Byte>();
-//			FileInputStream fileInput = new FileInputStream(filePath);
-//			byte section = 0b0;
-//			while (section != -1) {
-//				section = (byte) fileInput.read();
-//				if (section == -1) break;
-//				arrayData.add(section);
-//			}
-//			fileData = convertToArray(arrayData);
-//			fileInput.close();
 			
-			fileData = Files.readAllBytes(Paths.get(filePath));
+			FileInputStream fileInput = new FileInputStream(filePath);
+			byte[] fileByte = new byte[1];
+			while (true) { //assumption that the input file will always contain at least 1 byte of data
+				int guard = fileInput.read(fileByte);
+				if (guard == -1) break;
+				arrayData.add(fileByte[0]);
+			}
 			
-			
+			fileInput.close();
 		} catch (Exception e) {
 			System.out.println("Invalid file input, Exiting Program");
 			System.exit(0);
 		}
-		System.out.println();
-		//scanner.close();
+		
+		byte[] fileData = new byte[arrayData.size()];
+		
+		for (int i = 0; i < arrayData.size(); i++) {
+			fileData[i] = arrayData.get(i);
+		}
+
 		return fileData;
 	}
 
@@ -784,6 +783,7 @@ public class Main {
 	 * @param input The arraylist to convert to a byte array.
 	 * @return  An array of primitive bytes equivalent to the provided arraylist.
 	 */
+	@SuppressWarnings("unused")
 	private static byte[] convertToArray(ArrayList<Byte> input) {
 		byte[] toReturn = new byte[input.size()];
 		for (int index = 0; index < input.size(); index++) {
