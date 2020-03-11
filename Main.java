@@ -20,14 +20,29 @@ public class Main {
 	final static Scanner scanner = new Scanner(System.in);
 
 	public static void main(String[] args) {
+	
+		byte[] pw = "1042394879238741".getBytes();
+		byte[] msg = "hello I am the message".getBytes();
 		
-		Point testPoint = Point.multiply(Point.G, BigInteger.valueOf(113));
-		byte[] testBytes = testPoint.toByte();
-		byte[] byteX = new byte[testBytes.length - 1];
-		for (int i = 0; i < byteX.length; i++) byteX[i] = testBytes[i];
-		Point p2 = new Point(new BigInteger(byteX), testBytes[testBytes.length - 1] == 1);
-		if (testPoint.equals(p2)) System.out.println("Test passed! toByte method functional.");
-		else System.out.println("Test failed! Look at toByte");
+		BigInteger s = new BigInteger(new KMACXOF256(pw, "".getBytes(), 512, "K").getData());
+		s = s.multiply(BigInteger.valueOf(4));
+		BigInteger k = new BigInteger(new KMACXOF256(s.toByteArray(), msg, 512, "N").getData());
+		k = k.multiply(BigInteger.valueOf(4));
+		Point U = Point.multiply(Point.G, k);
+		
+		BigInteger h = new BigInteger(new KMACXOF256(U.getX().toByteArray(), msg, 512, "T").getData());
+		
+		
+		BigInteger zTest = k.add(h.multiply(s).negate()).mod(Point.r);
+		BigInteger keyS = new BigInteger(new KMACXOF256(pw, "".getBytes(), 512, "K").getData());
+		keyS = keyS.multiply(BigInteger.valueOf(4));
+		
+		Point Vtest = Point.multiply(Point.G, keyS);
+		
+		Point U2 = Point.pointSum(Point.multiply(Point.G, zTest), Point.multiply(Vtest, h));
+		
+		if (U.equals(U2)) System.out.println("Test succeeded!");
+		else System.out.println("Test failed!");
 		
 		System.out.println("---Cryptography Project by Max England and Tyler Lorella---");
 		System.out.println("--Enter digit for mode of operation: "
@@ -461,19 +476,17 @@ public class Main {
 	private static byte[] signatureGen(byte[] m, byte[] pw){
 
 		BigInteger s = new BigInteger(new KMACXOF256(pw, "".getBytes(), 512, "K").getData());
-		s.multiply(BigInteger.valueOf(4));
+		s = s.multiply(BigInteger.valueOf(4));
 
 		BigInteger k = new BigInteger(new KMACXOF256(s.toByteArray(), m, 512, "N").getData());
-		k.multiply(BigInteger.valueOf(4));
+		k = k.multiply(BigInteger.valueOf(4));
 
 		Point U = Point.multiply(Point.G, k);
-		System.out.println("Done");
 		
 		BigInteger h = new BigInteger(new KMACXOF256(U.getX().toByteArray(), m, 512, "T").getData());
 		BigInteger z = k.subtract(h.multiply(s)).mod(Point.r);
 
 		return (concatinateBytes(h.toByteArray(), z.toByteArray()));
-
 	}
 
 	/**
@@ -485,13 +498,13 @@ public class Main {
 	 */
 	private static boolean signatureVerify(byte[] hz, byte[] m, Point V) {
 
-		byte[] h = new byte[512];
-		byte[] z = new byte[hz.length -512];
+		byte[] h = new byte[64];
+		byte[] z = new byte[hz.length -64];
 		for (int i = 0; i < h.length; i++) {
 			h[i] = hz[i];
 		}
 		for (int i = 0; i < z.length; i++) {
-			z[i] = hz[512+i];
+			z[i] = hz[64+i];
 		}
 
 		BigInteger hVal = new BigInteger(h);
@@ -501,7 +514,6 @@ public class Main {
 		Point zG = Point.multiply(Point.G, zVal);
 		
 		Point U = Point.pointSum(hV, zG);
-		
 		BigInteger uX = U.getX();
 		byte[] test = new KMACXOF256(uX.toByteArray(), m, 512, "T").getData();
 
