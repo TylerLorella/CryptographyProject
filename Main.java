@@ -20,29 +20,6 @@ public class Main {
 	final static Scanner scanner = new Scanner(System.in);
 
 	public static void main(String[] args) {
-	
-		byte[] pw = "1042394879238741".getBytes();
-		byte[] msg = "hello I am the message".getBytes();
-		
-		BigInteger s = new BigInteger(new KMACXOF256(pw, "".getBytes(), 512, "K").getData());
-		s = s.multiply(BigInteger.valueOf(4));
-		BigInteger k = new BigInteger(new KMACXOF256(s.toByteArray(), msg, 512, "N").getData());
-		k = k.multiply(BigInteger.valueOf(4));
-		Point U = Point.multiply(Point.G, k);
-		
-		BigInteger h = new BigInteger(new KMACXOF256(U.getX().toByteArray(), msg, 512, "T").getData());
-		
-		
-		BigInteger zTest = k.add(h.multiply(s).negate()).mod(Point.r);
-		BigInteger keyS = new BigInteger(new KMACXOF256(pw, "".getBytes(), 512, "K").getData());
-		keyS = keyS.multiply(BigInteger.valueOf(4));
-		
-		Point Vtest = Point.multiply(Point.G, keyS);
-		
-		Point U2 = Point.pointSum(Point.multiply(Point.G, zTest), Point.multiply(Vtest, h));
-		
-		if (U.equals(U2)) System.out.println("Test succeeded!");
-		else System.out.println("Test failed!");
 		
 		System.out.println("---Cryptography Project by Max England and Tyler Lorella---");
 		System.out.println("--Enter digit for mode of operation: "
@@ -356,7 +333,6 @@ public class Main {
 
 		BigInteger k = BigInteger.ZERO;
 		Point W;
-
 		
 		//k = new random; k = 4k
 		secureRandom.nextBytes(randomVals);
