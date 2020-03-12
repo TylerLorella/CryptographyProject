@@ -12,7 +12,7 @@ public class Point {
 	
 	
 	//2^521 - 1 : a mersenne prime, necessary for the curve.
-	private static BigInteger mersenne = new BigInteger("2").pow(521).add(new BigInteger("-1"));
+	public static BigInteger mersenne = new BigInteger("2").pow(521).add(new BigInteger("-1"));
 
 	//Edwards curve constant
 	private static BigInteger d = new BigInteger("-376014");
@@ -136,16 +136,15 @@ public class Point {
 	 */
 	public static Point multiply(Point p, BigInteger s) {
 		
-		Point product = p;
 		
-		
+		Point product = new Point();
 		String bitString = s.toString(2);
 		Point n = p;
-		for (int i = 0; i < bitString.length(); i++) {
+		for (int i = bitString.length()-1; i >= 0; i--) {
 			if (bitString.charAt(i) == '1'){
 				product = Point.pointSum(product, n);
 			}
-			n = Point.pointSum(n, n);			
+			n = Point.pointSum(n, n);
 		}
 		return product;
 		
